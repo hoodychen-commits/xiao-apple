@@ -101,39 +101,22 @@
 
           <div class="form-group">
             <label class="form-label">付款方式 <span class="required">*</span></label>
-            <div class="payment-options">
+            <div class="payment-options" style="grid-template-columns: 1fr;">
               <div class="payment-option">
-                <input type="radio" name="payment" id="payCredit" value="credit">
-                <label for="payCredit">
-                  <span class="payment-icon">💳</span>
-                  刷卡付款
-                </label>
-              </div>
-              <div class="payment-option">
-                <input type="radio" name="payment" id="payTransfer" value="transfer">
-                <label for="payTransfer">
-                  <span class="payment-icon">🏦</span>
+                <input type="radio" name="payment" id="payTransfer" value="transfer" checked>
+                <label for="payTransfer" style="flex-direction: row; justify-content: center; gap: 12px; padding: 14px 20px;">
+                  <span class="payment-icon" style="font-size: 1.3rem;">🏦</span>
                   銀行轉帳
                 </label>
               </div>
             </div>
 
-            <!-- Credit Card Info -->
-            <div class="payment-info-box" id="creditInfo">
-              <h4>💳 刷卡付款說明</h4>
-              <p>請點擊以下連結前往付款頁面：</p>
-              <a href="PAYMENT_LINK_HERE" target="_blank" class="btn btn-primary btn-sm" style="margin-top:8px;">
-                前往刷卡付款 →
-              </a>
-              <p style="margin-top:12px;font-size:0.82rem;color:var(--text-light);">完成付款後，請截圖傳至我們的客服</p>
-            </div>
-
             <!-- Transfer Info -->
-            <div class="payment-info-box" id="transferInfo">
+            <div class="payment-info-box show" id="transferInfo">
               <h4>🏦 銀行轉帳資訊</h4>
-              <p>銀行：<strong>BANK_NAME_HERE</strong></p>
-              <p>帳號：<strong>ACCOUNT_NUMBER_HERE</strong></p>
-              <p>戶名：<strong>ACCOUNT_NAME_HERE</strong></p>
+              <p>銀行：<strong>國泰世華 永貞分行</strong></p>
+              <p>帳號：<strong>273506144813</strong></p>
+              <p>戶名：<strong>鍾沛蓉</strong></p>
               <p style="margin-top:12px;font-size:0.82rem;color:var(--text-light);">轉帳後請截圖傳至我們的客服確認</p>
             </div>
           </div>
