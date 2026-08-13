@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>下單成功！— 小蘋果團購</title>
+  <meta name="description" content="感謝您的訂購，小蘋果團購將盡快為您處理訂單。">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">
+    <div class="logo-icon">🍎</div>
+    小蘋果團購
+  </a>
+</nav>
+
+<div class="success-page">
+  <div class="success-card">
+    <div class="success-icon">🎉</div>
+    <h1 class="success-title">下單成功！</h1>
+    <p class="success-desc">感謝您的訂購，我們會盡快與您確認訂單。</p>
+
+    <div class="order-code">
+      <div class="order-code-label">您的訂單編號</div>
+      <div class="order-code-value" id="orderCodeDisplay">-</div>
+    </div>
+
+    <div id="orderDetails" style="text-align:left;margin-bottom:28px;">
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:20px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:0.9rem;">
+          <span style="color:var(--text-light)">商品</span>
+          <span style="color:var(--text-dark);font-weight:500;" id="successProductName">-</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:0.9rem;">
+          <span style="color:var(--text-light)">數量</span>
+          <span style="color:var(--text-dark);font-weight:500;" id="successQty">-</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:0.9rem;">
+          <span style="color:var(--text-light)">付款方式</span>
+          <span style="color:var(--text-dark);font-weight:500;" id="successPayment">-</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);font-size:1rem;font-weight:700;">
+          <span style="color:var(--text-dark)">總金額</span>
+          <span style="color:var(--primary);" id="successTotal">NT$ 0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment reminder -->
+    <div id="paymentReminder" style="display:none;margin-bottom:24px;"></div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <a href="index.html" class="btn btn-primary">
+        繼續購物 🛍️
+      </a>
+      <a href="index.html" class="btn btn-secondary">
+        回首頁
+      </a>
+    </div>
+
+    <p style="margin-top:24px;font-size:0.82rem;color:var(--text-light);">
+      如有任何問題請聯絡客服，記得保留您的訂單編號！
+    </p>
+  </div>
+</div>
+
+<footer class="footer">
+  <p>© 2024 小蘋果團購 · 好物共享，揪團更划算 🍎</p>
+</footer>
+
+<script>
+  const order = JSON.parse(sessionStorage.getItem('lastOrder') || '{}');
+
+  if (!order.orderCode) {
+    window.location.href = 'index.html';
+  } else {
+    document.getElementById('orderCodeDisplay').textContent = order.orderCode;
+    document.getElementById('successProductName').textContent = order.productName || '-';
+    document.getElementById('successQty').textContent = `${order.quantity} 件`;
+    document.getElementById('successPayment').textContent = order.paymentMethod === 'credit' ? '💳 刷卡' : '🏦 銀行轉帳';
+    document.getElementById('successTotal').textContent = `NT$ ${Number(order.totalAmount).toLocaleString()}`;
+
+    // Payment reminder
+    const reminder = document.getElementById('paymentReminder');
+    if (order.paymentMethod === 'transfer') {
+      reminder.style.display = 'block';
+      reminder.innerHTML = `
+        <div style="background:var(--bg-section);border-radius:var(--radius-sm);padding:16px 20px;border-left:4px solid var(--secondary);text-align:left;">
+          <p style="font-size:0.85rem;font-weight:700;color:var(--secondary);margin-bottom:8px;">🏦 請完成轉帳</p>
+          <p style="font-size:0.82rem;color:var(--text-mid);">轉帳後請傳截圖至我們的客服，謝謝！</p>
+        </div>
+      `;
+    } else if (order.paymentMethod === 'credit') {
+      reminder.style.display = 'block';
+      reminder.innerHTML = `
+        <div style="background:var(--bg-section);border-radius:var(--radius-sm);padding:16px 20px;border-left:4px solid var(--primary);text-align:left;">
+          <p style="font-size:0.85rem;font-weight:700;color:var(--primary);margin-bottom:8px;">💳 請完成刷卡</p>
+          <p style="font-size:0.82rem;color:var(--text-mid);">若您尚未完成刷卡，請回到商品頁面進行付款。</p>
+        </div>
+      `;
+    }
+
+    sessionStorage.removeItem('lastOrder');
+  }
+</script>
+
+</body>
+</html>

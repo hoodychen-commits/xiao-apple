@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品管理 — 小蘋果後台</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay" style="display:none;">
+  <div class="spinner"></div>
+  <p style="color:var(--text-mid);">處理中...</p>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3 class="modal-title">⚠️ 確認刪除</h3>
+      <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-mid);">確定要刪除商品「<strong id="deleteProductName"></strong>」嗎？此操作無法復原。</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">取消</button>
+      <button class="btn btn-primary" id="confirmDeleteBtn" onclick="confirmDelete()">確認刪除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">新增商品</h3>
+      <button class="modal-close" onclick="closeProductModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="productForm">
+        <input type="hidden" id="editProductId">
+
+        <div class="form-group">
+          <label class="form-label" for="pName">商品名稱 <span class="required">*</span></label>
+          <input type="text" class="form-control" id="pName" placeholder="請輸入商品名稱" required>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label class="form-label" for="pCategory">分類</label>
+            <input type="text" class="form-control" id="pCategory" placeholder="如：零食、保養、日用品">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pUnit">單位</label>
+            <input type="text" class="form-control" id="pUnit" placeholder="如：件、盒、包">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label class="form-label" for="pPrice">價格 (NT$) <span class="required">*</span></label>
+            <input type="number" class="form-control" id="pPrice" placeholder="0" min="0" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pStock">庫存數量</label>
+            <input type="number" class="form-control" id="pStock" placeholder="留空表示無限">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pDeadline">截止日期</label>
+          <input type="date" class="form-control" id="pDeadline">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pDesc">商品說明</label>
+          <textarea class="form-control" id="pDesc" placeholder="商品詳細說明..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">商品圖片</label>
+          <div class="file-upload" id="fileUploadArea">
+            <input type="file" id="pImage" accept="image/*" onchange="handleImageSelect(event)">
+            <div class="file-upload-icon">📷</div>
+            <p class="file-upload-text"><strong>點擊上傳</strong>或拖放圖片（JPG, PNG, GIF）</p>
+          </div>
+          <div class="file-preview" id="imagePreview" style="display:none;">
+            <img id="previewImg" src="" alt="預覽">
+          </div>
+          <p style="font-size:0.78rem;color:var(--text-light);margin-top:6px;" id="currentImageNote"></p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pStatus">狀態</label>
+          <select class="form-control" id="pStatus">
+            <option value="active">✅ 開團中</option>
+            <option value="ended">⛔ 已截止</option>
+            <option value="draft">📝 草稿</option>
+          </select>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeProductModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveProduct()">💾 儲存商品</button>
+    </div>
+  </div>
+</div>
+
+<!-- Layout -->
+<div class="admin-layout">
+
+  <aside class="admin-sidebar">
+    <div class="admin-logo"><span>🍎</span> 小蘋果後台</div>
+    <ul class="admin-nav">
+      <li><a href="dashboard.html">📊 數據儀表板</a></li>
+      <li><a href="products.html" class="active">📦 商品管理</a></li>
+      <li><a href="orders.html">🧾 訂單管理</a></li>
+      <li style="margin-top:auto;padding-top:24px;">
+        <a href="#" onclick="handleLogout()" style="color:var(--text-light);">🚪 登出</a>
+      </li>
+    </ul>
+    <div style="padding:16px 12px 0;border-top:1px solid var(--border);margin-top:24px;">
+      <p style="font-size:0.78rem;color:var(--text-light);">登入帳號</p>
+      <p style="font-size:0.85rem;color:var(--text-mid);font-weight:500;margin-top:2px;" id="userEmail">-</p>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-header">
+      <h2 class="admin-page-title">📦 商品管理</h2>
+      <button class="btn btn-primary" id="addProductBtn" onclick="openAddModal()">
+        ＋ 新增商品
+      </button>
+    </div>
+
+    <!-- Filter Bar -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" id="filterAll" onclick="filterProducts('all')">全部</button>
+      <button class="btn btn-secondary btn-sm" id="filterActive" onclick="filterProducts('active')">開團中</button>
+      <button class="btn btn-secondary btn-sm" id="filterEnded" onclick="filterProducts('ended')">已截止</button>
+      <button class="btn btn-secondary btn-sm" id="filterDraft" onclick="filterProducts('draft')">草稿</button>
+    </div>
+
+    <!-- Products Table -->
+    <div class="admin-table-wrapper">
+      <div id="productsTableLoading" style="text-align:center;padding:48px;">
+        <div class="spinner"></div>
+      </div>
+      <div id="productsTableEmpty" style="display:none;">
+        <div class="empty-state">
+          <div class="empty-state-icon">📦</div>
+          <h3>尚無商品</h3>
+          <p>點擊右上角「新增商品」開始上架吧！</p>
+        </div>
+      </div>
+      <table class="admin-table" id="productsTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>圖片</th>
+            <th>商品名稱</th>
+            <th>分類</th>
+            <th>價格</th>
+            <th>庫存</th>
+            <th>瀏覽數</th>
+            <th>截止日</th>
+            <th>狀態</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="productsTableBody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import { auth, db, storage } from '../js/firebase-config.js';
+  import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    collection, getDocs, addDoc, updateDoc, deleteDoc, doc,
+    serverTimestamp, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import {
+    ref, uploadBytes, getDownloadURL, deleteObject
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+  let allProducts = [];
+  let currentFilter = 'all';
+  let deleteTargetId = null;
+  let selectedImageFile = null;
+
+  // Auth Guard
+  onAuthStateChanged(auth, user => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    document.getElementById('userEmail').textContent = user.email;
+    loadProducts();
+  });
+
+  window.handleLogout = async () => {
+    await signOut(auth);
+    window.location.href = 'index.html';
+  };
+
+  function showToast(msg, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${msg}`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+  }
+
+  function showLoading(show) {
+    document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+  }
+
+  async function loadProducts() {
+    try {
+      const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderTable();
+    } catch (err) {
+      console.error(err);
+      showToast('載入商品失敗', 'error');
+    } finally {
+      document.getElementById('productsTableLoading').style.display = 'none';
+    }
+  }
+
+  function renderTable() {
+    const filtered = currentFilter === 'all'
+      ? allProducts
+      : allProducts.filter(p => p.status === currentFilter);
+
+    const tbody = document.getElementById('productsTableBody');
+    const table = document.getElementById('productsTable');
+    const empty = document.getElementById('productsTableEmpty');
+
+    if (filtered.length === 0) {
+      table.style.display = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+
+    table.style.display = 'table';
+    empty.style.display = 'none';
+
+    tbody.innerHTML = filtered.map(p => {
+      const statusMap = {
+        active: '<span class="badge badge-active">✅ 開團中</span>',
+        ended: '<span class="badge">⛔ 已截止</span>',
+        draft: '<span class="badge" style="background:#F5F5F5;color:#999;">📝 草稿</span>'
+      };
+
+      const imgHtml = p.imageUrl
+        ? `<div class="product-thumb"><img src="${p.imageUrl}" alt="${p.name}"></div>`
+        : `<div class="product-thumb">🛍️</div>`;
+
+      const deadline = p.deadline
+        ? new Date(p.deadline).toLocaleDateString('zh-TW')
+        : '長期';
+
+      return `
+        <tr>
+          <td>${imgHtml}</td>
+          <td style="font-weight:600;max-width:180px;">${escapeHtml(p.name)}</td>
+          <td><span class="badge badge-active" style="background:var(--bg-section);color:var(--text-mid);">${escapeHtml(p.category || '-')}</span></td>
+          <td style="font-weight:700;color:var(--primary);">NT$ ${Number(p.price).toLocaleString()}</td>
+          <td>${p.stock !== undefined ? p.stock : '∞'}</td>
+          <td>👁️ ${p.views || 0}</td>
+          <td style="font-size:0.85rem;color:var(--text-light);">${deadline}</td>
+          <td>${statusMap[p.status] || '-'}</td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-secondary btn-sm" onclick="openEditModal('${p.id}')">編輯</button>
+              <button class="btn btn-sm" style="background:var(--bg-section);color:var(--primary);" onclick="openDeleteModal('${p.id}','${escapeHtml(p.name)}')">刪除</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  // Filter
+  window.filterProducts = (filter) => {
+    currentFilter = filter;
+    ['All','Active','Ended','Draft'].forEach(f => {
+      document.getElementById(`filter${f}`)?.classList.remove('btn-primary');
+      document.getElementById(`filter${f}`)?.classList.add('btn-secondary');
+    });
+    document.getElementById(`filter${filter.charAt(0).toUpperCase()+filter.slice(1)}`)?.classList.replace('btn-secondary','btn-primary');
+    renderTable();
+  };
+
+  // Image select
+  window.handleImageSelect = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    selectedImageFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('previewImg').src = e.target.result;
+      document.getElementById('imagePreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Open Add Modal
+  window.openAddModal = () => {
+    document.getElementById('modalTitle').textContent = '新增商品';
+    document.getElementById('productForm').reset();
+    document.getElementById('editProductId').value = '';
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('currentImageNote').textContent = '';
+    selectedImageFile = null;
+    document.getElementById('productModal').classList.add('show');
+  };
+
+  // Open Edit Modal
+  window.openEditModal = (id) => {
+    const product = allProducts.find(p => p.id === id);
+    if (!product) return;
+
+    document.getElementById('modalTitle').textContent = '編輯商品';
+    document.getElementById('editProductId').value = id;
+    document.getElementById('pName').value = product.name || '';
+    document.getElementById('pCategory').value = product.category || '';
+    document.getElementById('pUnit').value = product.unit || '';
+    document.getElementById('pPrice').value = product.price || '';
+    document.getElementById('pStock').value = product.stock !== undefined ? product.stock : '';
+    document.getElementById('pDeadline').value = product.deadline || '';
+    document.getElementById('pDesc').value = product.description || '';
+    document.getElementById('pStatus').value = product.status || 'active';
+    selectedImageFile = null;
+
+    if (product.imageUrl) {
+      document.getElementById('previewImg').src = product.imageUrl;
+      document.getElementById('imagePreview').style.display = 'block';
+      document.getElementById('currentImageNote').textContent = '目前圖片如上，重新選擇可替換';
+    } else {
+      document.getElementById('imagePreview').style.display = 'none';
+      document.getElementById('currentImageNote').textContent = '';
+    }
+
+    document.getElementById('productModal').classList.add('show');
+  };
+
+  window.closeProductModal = () => {
+    document.getElementById('productModal').classList.remove('show');
+  };
+
+  // Save Product
+  window.saveProduct = async () => {
+    const name = document.getElementById('pName').value.trim();
+    const price = parseFloat(document.getElementById('pPrice').value);
+
+    if (!name || isNaN(price)) {
+      showToast('請填寫商品名稱和價格', 'error');
+      return;
+    }
+
+    showLoading(true);
+
+    try {
+      const editId = document.getElementById('editProductId').value;
+      const existingProduct = editId ? allProducts.find(p => p.id === editId) : null;
+
+      let imageUrl = existingProduct?.imageUrl || '';
+
+      // Upload image if selected
+      if (selectedImageFile) {
+        const imgRef = ref(storage, `products/${Date.now()}_${selectedImageFile.name}`);
+        const snap = await uploadBytes(imgRef, selectedImageFile);
+        imageUrl = await getDownloadURL(snap.ref);
+
+        // Delete old image if exists
+        if (existingProduct?.imagePath) {
+          try {
+            await deleteObject(ref(storage, existingProduct.imagePath));
+          } catch (e) { /* ignore */ }
+        }
+      }
+
+      const stockVal = document.getElementById('pStock').value;
+      const productData = {
+        name,
+        category: document.getElementById('pCategory').value.trim() || '精選商品',
+        unit: document.getElementById('pUnit').value.trim() || '件',
+        price,
+        stock: stockVal !== '' ? parseInt(stockVal) : undefined,
+        deadline: document.getElementById('pDeadline').value || null,
+        description: document.getElementById('pDesc').value.trim(),
+        status: document.getElementById('pStatus').value,
+        imageUrl,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editId) {
+        await updateDoc(doc(db, 'products', editId), productData);
+        showToast('商品已更新！');
+      } else {
+        await addDoc(collection(db, 'products'), {
+          ...productData,
+          views: 0,
+          createdAt: serverTimestamp()
+        });
+        showToast('商品已新增！');
+      }
+
+      closeProductModal();
+      await loadProducts();
+
+    } catch (err) {
+      console.error(err);
+      showToast('儲存失敗，請再試一次', 'error');
+    } finally {
+      showLoading(false);
+    }
+  };
+
+  // Delete
+  window.openDeleteModal = (id, name) => {
+    deleteTargetId = id;
+    document.getElementById('deleteProductName').textContent = name;
+    document.getElementById('deleteModal').classList.add('show');
+  };
+
+  window.closeDeleteModal = () => {
+    document.getElementById('deleteModal').classList.remove('show');
+    deleteTargetId = null;
+  };
+
+  window.confirmDelete = async () => {
+    if (!deleteTargetId) return;
+    showLoading(true);
+    try {
+      await deleteDoc(doc(db, 'products', deleteTargetId));
+      showToast('商品已刪除');
+      closeDeleteModal();
+      await loadProducts();
+    } catch (err) {
+      showToast('刪除失敗', 'error');
+    } finally {
+      showLoading(false);
+    }
+  };
+
+  // Close modals on overlay click
+  document.getElementById('productModal').addEventListener('click', function(e) {
+    if (e.target === this) closeProductModal();
+  });
+  document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
+</script>
+
+</body>
+</html>

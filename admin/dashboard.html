@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>數據儀表板 — 小蘋果後台</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="admin-logo">
+      <span>🍎</span> 小蘋果後台
+    </div>
+    <ul class="admin-nav">
+      <li><a href="dashboard.html" class="active" id="nav-dashboard">📊 數據儀表板</a></li>
+      <li><a href="products.html" id="nav-products">📦 商品管理</a></li>
+      <li><a href="orders.html" id="nav-orders">🧾 訂單管理</a></li>
+      <li style="margin-top:auto;padding-top:24px;">
+        <a href="#" onclick="handleLogout()" style="color:var(--text-light);">🚪 登出</a>
+      </li>
+    </ul>
+    <div style="padding:16px 12px 0;border-top:1px solid var(--border);margin-top:24px;">
+      <p style="font-size:0.78rem;color:var(--text-light);">登入帳號</p>
+      <p style="font-size:0.85rem;color:var(--text-mid);font-weight:500;margin-top:2px;" id="userEmail">-</p>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <h2 class="admin-page-title">📊 數據儀表板</h2>
+      <span style="font-size:0.85rem;color:var(--text-light);" id="lastUpdated"></span>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon pink">💰</div>
+        <div class="stat-label">本月營業額</div>
+        <div class="stat-value" id="monthRevenue">-</div>
+        <div class="stat-change up" id="monthRevenueChange"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">📋</div>
+        <div class="stat-label">本月訂單數</div>
+        <div class="stat-value" id="monthOrders">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon yellow">👁️</div>
+        <div class="stat-label">總商品瀏覽</div>
+        <div class="stat-value" id="totalViews">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue">📦</div>
+        <div class="stat-label">開團中商品</div>
+        <div class="stat-value" id="activeProducts">-</div>
+      </div>
+    </div>
+
+    <!-- Revenue Chart -->
+    <div class="chart-container">
+      <div class="chart-header">
+        <h3 class="chart-title">💰 營業額趨勢</h3>
+        <div class="chart-tabs">
+          <button class="chart-tab active" id="tabDaily" onclick="switchChart('daily')">每日</button>
+          <button class="chart-tab" id="tabMonthly" onclick="switchChart('monthly')">每月</button>
+        </div>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Orders Chart -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3 class="chart-title">🧾 訂單狀態分佈</h3>
+        </div>
+        <div class="chart-wrapper" style="height:220px;">
+          <canvas id="orderStatusChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3 class="chart-title">🔥 熱門商品 Top 5</h3>
+        </div>
+        <div id="topProductsList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script type="module">
+  import { auth, db } from '../js/firebase-config.js';
+  import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // Auth Guard
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = 'index.html';
+      return;
+    }
+    document.getElementById('userEmail').textContent = user.email;
+    loadDashboard();
+  });
+
+  window.handleLogout = async () => {
+    await signOut(auth);
+    window.location.href = 'index.html';
+  };
+
+  let revenueChart = null;
+  let ordersData = [];
+
+  async function loadDashboard() {
+    document.getElementById('lastUpdated').textContent = `更新於 ${new Date().toLocaleTimeString('zh-TW')}`;
+
+    try {
+      // Load all orders
+      const ordersSnap = await getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
+      ordersData = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Load all products
+      const productsSnap = await getDocs(collection(db, 'products'));
+      const products = productsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Calculate stats
+      const now = new Date();
+      const thisMonth = now.getMonth();
+      const thisYear = now.getFullYear();
+
+      const monthOrders = ordersData.filter(o => {
+        if (!o.createdAt) return false;
+        const d = o.createdAt.toDate ? o.createdAt.toDate() : new Date(o.createdAt);
+        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+      });
+
+      const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      const totalViews = products.reduce((sum, p) => sum + (p.views || 0), 0);
+      const activeProducts = products.filter(p => p.status === 'active').length;
+
+      document.getElementById('monthRevenue').textContent = `NT$ ${monthRevenue.toLocaleString()}`;
+      document.getElementById('monthOrders').textContent = monthOrders.length;
+      document.getElementById('totalViews').textContent = totalViews.toLocaleString();
+      document.getElementById('activeProducts').textContent = activeProducts;
+
+      // Charts
+      renderRevenueChart('daily');
+      renderOrderStatusChart(ordersData);
+      renderTopProducts(ordersData, products);
+
+    } catch (err) {
+      console.error('Dashboard error:', err);
+    }
+  }
+
+  function renderRevenueChart(mode) {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+
+    if (revenueChart) revenueChart.destroy();
+
+    const now = new Date();
+    let labels = [], data = [];
+
+    if (mode === 'daily') {
+      // Last 14 days
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        labels.push(`${d.getMonth()+1}/${d.getDate()}`);
+
+        const revenue = ordersData
+          .filter(o => {
+            if (!o.createdAt) return false;
+            const od = o.createdAt.toDate ? o.createdAt.toDate() : new Date(o.createdAt);
+            return od.getFullYear() === d.getFullYear()
+              && od.getMonth() === d.getMonth()
+              && od.getDate() === d.getDate();
+          })
+          .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+        data.push(revenue);
+      }
+    } else {
+      // Last 6 months
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        labels.push(`${d.getFullYear()}/${d.getMonth()+1}月`);
+
+        const revenue = ordersData
+          .filter(o => {
+            if (!o.createdAt) return false;
+            const od = o.createdAt.toDate ? o.createdAt.toDate() : new Date(o.createdAt);
+            return od.getFullYear() === d.getFullYear() && od.getMonth() === d.getMonth();
+          })
+          .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+        data.push(revenue);
+      }
+    }
+
+    revenueChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: '營業額 (NT$)',
+          data,
+          borderColor: '#FF6B8A',
+          backgroundColor: 'rgba(255, 107, 138, 0.1)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#FF6B8A',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          tension: 0.4,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `NT$ ${ctx.raw.toLocaleString()}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: {
+              callback: v => `NT$ ${v.toLocaleString()}`,
+              font: { family: 'Noto Sans TC' }
+            }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: 'Noto Sans TC' } }
+          }
+        }
+      }
+    });
+  }
+
+  function renderOrderStatusChart(orders) {
+    const ctx = document.getElementById('orderStatusChart').getContext('2d');
+    const pending = orders.filter(o => o.status === 'pending').length;
+    const paid = orders.filter(o => o.status === 'paid').length;
+    const shipped = orders.filter(o => o.status === 'shipped').length;
+
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['待付款', '已付款', '已出貨'],
+        datasets: [{
+          data: [pending, paid, shipped],
+          backgroundColor: ['#FFD166', '#6DCAAC', '#4B6FD4'],
+          borderWidth: 0,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { font: { family: 'Noto Sans TC' }, padding: 16 }
+          }
+        },
+        cutout: '65%'
+      }
+    });
+  }
+
+  function renderTopProducts(orders, products) {
+    const productSales = {};
+    orders.forEach(o => {
+      if (!productSales[o.productId]) {
+        productSales[o.productId] = { name: o.productName, revenue: 0, count: 0 };
+      }
+      productSales[o.productId].revenue += o.totalAmount || 0;
+      productSales[o.productId].count += o.quantity || 1;
+    });
+
+    const sorted = Object.values(productSales)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    const container = document.getElementById('topProductsList');
+    if (sorted.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="padding:32px 0;"><div class="empty-state-icon">📊</div><p>尚無銷售數據</p></div>';
+      return;
+    }
+
+    const maxRevenue = sorted[0].revenue;
+
+    container.innerHTML = sorted.map((p, i) => `
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:0.85rem;font-weight:700;color:var(--text-light);min-width:20px;">${i+1}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:0.85rem;font-weight:500;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${p.name}</span>
+            <span style="font-size:0.82rem;color:var(--primary);font-weight:700;">NT$ ${p.revenue.toLocaleString()}</span>
+          </div>
+          <div style="height:6px;background:var(--bg);border-radius:100px;overflow:hidden;">
+            <div style="height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-light));border-radius:100px;width:${maxRevenue > 0 ? (p.revenue/maxRevenue*100).toFixed(0) : 0}%;transition:width 0.6s ease;"></div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.switchChart = (mode) => {
+    document.getElementById('tabDaily').classList.toggle('active', mode === 'daily');
+    document.getElementById('tabMonthly').classList.toggle('active', mode === 'monthly');
+    renderRevenueChart(mode);
+  };
+</script>
+
+</body>
+</html>

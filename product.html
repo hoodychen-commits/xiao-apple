@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品詳情 — 小蘋果團購</title>
+  <meta name="description" content="查看商品詳情並立即下單，小蘋果團購精選好物。">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">
+    <div class="logo-icon">🍎</div>
+    小蘋果團購
+  </a>
+  <ul class="navbar-nav">
+    <li><a href="index.html">← 返回商品列表</a></li>
+  </ul>
+</nav>
+
+<!-- Loading -->
+<div class="loading-overlay" id="pageLoading">
+  <div class="spinner"></div>
+  <p style="color:var(--text-mid)">載入中...</p>
+</div>
+
+<!-- Main Content -->
+<main id="mainContent" style="display:none;">
+  <div class="container" style="padding-top:40px;padding-bottom:60px;">
+    <!-- Breadcrumb -->
+    <nav style="margin-bottom:32px;font-size:0.85rem;color:var(--text-light);">
+      <a href="index.html" style="color:var(--primary);">首頁</a>
+      <span style="margin:0 8px;">›</span>
+      <span id="breadcrumbName">商品詳情</span>
+    </nav>
+
+    <div class="product-detail">
+      <!-- Left: Image -->
+      <div>
+        <div class="product-detail-img" id="productImg">🛍️</div>
+      </div>
+
+      <!-- Right: Info + Order Form -->
+      <div class="product-detail-info">
+        <div>
+          <span class="product-card-tag" id="productCategory">精選商品</span>
+          <h1 style="font-size:1.8rem;margin:12px 0 8px;" id="productName">商品名稱</h1>
+          <div class="product-detail-price" id="productPrice">NT$ 0</div>
+        </div>
+
+        <div class="product-detail-meta">
+          <div class="meta-row">
+            <span class="meta-label">📦 單位</span>
+            <span class="meta-value" id="productUnit">件</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">⏰ 截止</span>
+            <span class="meta-value" id="productDeadline">長期開團</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">📊 庫存</span>
+            <span class="meta-value" id="productStock">充足</span>
+          </div>
+        </div>
+
+        <p style="color:var(--text-mid);font-size:0.95rem;line-height:1.8;" id="productDesc"></p>
+
+        <!-- Order Form -->
+        <div class="order-form" id="orderForm">
+          <h3 style="margin-bottom:20px;font-size:1rem;color:var(--text-dark);">📝 填寫訂購資料</h3>
+
+          <div class="form-group">
+            <label class="form-label" for="buyerName">姓名 <span class="required">*</span></label>
+            <input type="text" class="form-control" id="buyerName" placeholder="請輸入您的姓名">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="buyerPhone">手機號碼 <span class="required">*</span></label>
+            <input type="tel" class="form-control" id="buyerPhone" placeholder="09XX-XXX-XXX">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="buyerAddress">收件地址 <span class="required">*</span></label>
+            <input type="text" class="form-control" id="buyerAddress" placeholder="請輸入收件地址">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">數量 <span class="required">*</span></label>
+            <div class="qty-control">
+              <button class="qty-btn" id="qtyMinus" type="button">−</button>
+              <input type="number" class="qty-input" id="quantity" value="1" min="1" max="999">
+              <button class="qty-btn" id="qtyPlus" type="button">+</button>
+              <span style="color:var(--text-light);font-size:0.85rem;" id="qtyUnit">件</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">付款方式 <span class="required">*</span></label>
+            <div class="payment-options">
+              <div class="payment-option">
+                <input type="radio" name="payment" id="payCredit" value="credit">
+                <label for="payCredit">
+                  <span class="payment-icon">💳</span>
+                  刷卡付款
+                </label>
+              </div>
+              <div class="payment-option">
+                <input type="radio" name="payment" id="payTransfer" value="transfer">
+                <label for="payTransfer">
+                  <span class="payment-icon">🏦</span>
+                  銀行轉帳
+                </label>
+              </div>
+            </div>
+
+            <!-- Credit Card Info -->
+            <div class="payment-info-box" id="creditInfo">
+              <h4>💳 刷卡付款說明</h4>
+              <p>請點擊以下連結前往付款頁面：</p>
+              <a href="PAYMENT_LINK_HERE" target="_blank" class="btn btn-primary btn-sm" style="margin-top:8px;">
+                前往刷卡付款 →
+              </a>
+              <p style="margin-top:12px;font-size:0.82rem;color:var(--text-light);">完成付款後，請截圖傳至我們的客服</p>
+            </div>
+
+            <!-- Transfer Info -->
+            <div class="payment-info-box" id="transferInfo">
+              <h4>🏦 銀行轉帳資訊</h4>
+              <p>銀行：<strong>BANK_NAME_HERE</strong></p>
+              <p>帳號：<strong>ACCOUNT_NUMBER_HERE</strong></p>
+              <p>戶名：<strong>ACCOUNT_NAME_HERE</strong></p>
+              <p style="margin-top:12px;font-size:0.82rem;color:var(--text-light);">轉帳後請截圖傳至我們的客服確認</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="buyerNote">備註（選填）</label>
+            <textarea class="form-control" id="buyerNote" placeholder="如有特殊需求請備註"></textarea>
+          </div>
+
+          <!-- Order Summary -->
+          <div class="order-summary" id="orderSummary">
+            <div class="order-summary-row">
+              <span>商品單價</span>
+              <span id="summaryPrice">NT$ 0</span>
+            </div>
+            <div class="order-summary-row">
+              <span>數量</span>
+              <span id="summaryQty">× 1</span>
+            </div>
+            <div class="order-summary-row">
+              <span>✨ 訂單總金額</span>
+              <span id="summaryTotal">NT$ 0</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block" id="submitBtn" onclick="submitOrder()">
+            🎉 確認下單
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Closed State -->
+<div id="closedState" style="display:none;">
+  <div class="success-page">
+    <div class="success-card">
+      <div class="success-icon" style="background:linear-gradient(135deg,var(--text-light),#ccc);">😔</div>
+      <h2 class="success-title">此團購已截止</h2>
+      <p class="success-desc">很遺憾，這個商品的開團期限已過，請回首頁查看其他開團商品！</p>
+      <a href="index.html" class="btn btn-primary">← 回首頁看看</a>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <p>© 2024 小蘋果團購 · 好物共享，揪團更划算 🍎</p>
+</footer>
+
+<script type="module">
+  import { db } from './js/firebase-config.js';
+  import {
+    doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, increment
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const params = new URLSearchParams(window.location.search);
+  const productId = params.get('id');
+  let currentProduct = null;
+
+  function showToast(msg, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${msg}`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+  }
+
+  async function loadProduct() {
+    if (!productId) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    try {
+      const docRef = doc(db, 'products', productId);
+      const docSnap = await getDoc(docRef);
+
+      document.getElementById('pageLoading').style.display = 'none';
+
+      if (!docSnap.exists() || docSnap.data().status !== 'active') {
+        document.getElementById('closedState').style.display = 'flex';
+        return;
+      }
+
+      currentProduct = { id: docSnap.id, ...docSnap.data() };
+
+      // Check deadline
+      if (currentProduct.deadline) {
+        const deadline = new Date(currentProduct.deadline);
+        if (deadline < new Date()) {
+          document.getElementById('closedState').style.display = 'flex';
+          // Update product status
+          await updateDoc(docRef, { status: 'ended' });
+          return;
+        }
+      }
+
+      // Track view
+      await updateDoc(docRef, { views: increment(1) });
+
+      renderProduct(currentProduct);
+      document.getElementById('mainContent').style.display = 'block';
+
+    } catch (error) {
+      console.error(error);
+      document.getElementById('pageLoading').style.display = 'none';
+      document.getElementById('closedState').style.display = 'flex';
+    }
+  }
+
+  function renderProduct(product) {
+    document.title = `${product.name} — 小蘋果團購`;
+
+    document.getElementById('breadcrumbName').textContent = product.name;
+    document.getElementById('productName').textContent = product.name;
+    document.getElementById('productCategory').textContent = product.category || '精選商品';
+    document.getElementById('productPrice').textContent = `NT$ ${Number(product.price).toLocaleString()}`;
+    document.getElementById('productDesc').textContent = product.description || '';
+    document.getElementById('productUnit').textContent = product.unit || '件';
+    document.getElementById('qtyUnit').textContent = product.unit || '件';
+
+    if (product.imageUrl) {
+      document.getElementById('productImg').innerHTML = `<img src="${product.imageUrl}" alt="${product.name}">`;
+    }
+
+    if (product.deadline) {
+      const d = new Date(product.deadline);
+      const daysLeft = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
+      document.getElementById('productDeadline').textContent =
+        `${d.toLocaleDateString('zh-TW')}（剩 ${daysLeft} 天）`;
+      if (daysLeft <= 3) {
+        document.getElementById('productDeadline').style.color = 'var(--primary)';
+        document.getElementById('productDeadline').style.fontWeight = '700';
+      }
+    }
+
+    if (product.stock !== undefined) {
+      const stockEl = document.getElementById('productStock');
+      if (product.stock <= 0) {
+        stockEl.textContent = '已售完';
+        stockEl.style.color = 'var(--primary)';
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').textContent = '已售完';
+      } else if (product.stock <= 10) {
+        stockEl.textContent = `僅剩 ${product.stock} ${product.unit || '件'}`;
+        stockEl.style.color = 'var(--primary)';
+      } else {
+        stockEl.textContent = `${product.stock} ${product.unit || '件'}`;
+      }
+    }
+
+    updateSummary();
+  }
+
+  function updateSummary() {
+    if (!currentProduct) return;
+    const qty = parseInt(document.getElementById('quantity').value) || 1;
+    const price = currentProduct.price || 0;
+    const total = qty * price;
+
+    document.getElementById('summaryPrice').textContent = `NT$ ${Number(price).toLocaleString()}`;
+    document.getElementById('summaryQty').textContent = `× ${qty}`;
+    document.getElementById('summaryTotal').textContent = `NT$ ${Number(total).toLocaleString()}`;
+  }
+
+  // Quantity controls
+  document.getElementById('qtyPlus').addEventListener('click', () => {
+    const input = document.getElementById('quantity');
+    input.value = Math.min(999, parseInt(input.value || 1) + 1);
+    updateSummary();
+  });
+
+  document.getElementById('qtyMinus').addEventListener('click', () => {
+    const input = document.getElementById('quantity');
+    input.value = Math.max(1, parseInt(input.value || 1) - 1);
+    updateSummary();
+  });
+
+  document.getElementById('quantity').addEventListener('input', updateSummary);
+
+  // Payment method toggle
+  document.querySelectorAll('input[name="payment"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.getElementById('creditInfo').classList.remove('show');
+      document.getElementById('transferInfo').classList.remove('show');
+      if (radio.value === 'credit') {
+        document.getElementById('creditInfo').classList.add('show');
+      } else if (radio.value === 'transfer') {
+        document.getElementById('transferInfo').classList.add('show');
+      }
+    });
+  });
+
+  // Submit Order
+  window.submitOrder = async () => {
+    const name = document.getElementById('buyerName').value.trim();
+    const phone = document.getElementById('buyerPhone').value.trim();
+    const address = document.getElementById('buyerAddress').value.trim();
+    const qty = parseInt(document.getElementById('quantity').value) || 1;
+    const payment = document.querySelector('input[name="payment"]:checked');
+    const note = document.getElementById('buyerNote').value.trim();
+
+    if (!name || !phone || !address) {
+      showToast('請填寫姓名、手機號碼和地址', 'error');
+      return;
+    }
+
+    if (!payment) {
+      showToast('請選擇付款方式', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '送出中...';
+
+    try {
+      const total = qty * currentProduct.price;
+      const orderCode = `AP${Date.now().toString(36).toUpperCase()}`;
+
+      await addDoc(collection(db, 'orders'), {
+        orderCode,
+        productId: currentProduct.id,
+        productName: currentProduct.name,
+        productPrice: currentProduct.price,
+        productUnit: currentProduct.unit || '件',
+        quantity: qty,
+        totalAmount: total,
+        buyerName: name,
+        buyerPhone: phone,
+        buyerAddress: address,
+        paymentMethod: payment.value === 'credit' ? '刷卡' : '銀行轉帳',
+        note,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+
+      // Save to sessionStorage for success page
+      sessionStorage.setItem('lastOrder', JSON.stringify({
+        orderCode,
+        productName: currentProduct.name,
+        quantity: qty,
+        totalAmount: total,
+        paymentMethod: payment.value
+      }));
+
+      window.location.href = 'order-success.html';
+
+    } catch (error) {
+      console.error(error);
+      showToast('下單失敗，請稍後再試', 'error');
+      btn.disabled = false;
+      btn.textContent = '🎉 確認下單';
+    }
+  };
+
+  loadProduct();
+</script>
+
+</body>
+</html>

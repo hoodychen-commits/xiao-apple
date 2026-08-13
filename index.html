@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小蘋果團購 — 好物共享，一起揪團</title>
+  <meta name="description" content="小蘋果團購，精選好物，揪團享優惠！瀏覽最新商品，快速下單，刷卡轉帳皆可付款。">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
+</head>
+<body>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">
+    <div class="logo-icon">🍎</div>
+    小蘋果團購
+  </a>
+  <ul class="navbar-nav">
+    <li><a href="index.html">所有商品</a></li>
+    <li><a href="admin/index.html">後台管理</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">🎀 精選好物 限時開團</div>
+    <h1>讓好物<span>更實惠</span><br>一起揪團購</h1>
+    <p>精選商品，品質保證，揪好友一起買更省！<br>刷卡、轉帳都可以付款，安全又方便。</p>
+    <a href="#products" class="btn btn-primary">
+      <span>🛍️</span> 瀏覽商品
+    </a>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="section" id="products">
+  <div class="container">
+    <h2 class="section-title">🌟 開團中商品</h2>
+    <p class="section-subtitle">以下商品均為限時開團，請把握時機下單！</p>
+
+    <!-- Loading State -->
+    <div id="productsLoading" style="text-align:center;padding:64px 0;">
+      <div class="spinner"></div>
+      <p style="margin-top:16px;color:var(--text-light);">載入商品中...</p>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="products-grid" id="productsGrid" style="display:none;"></div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="productsEmpty" style="display:none;">
+      <div class="empty-state-icon">🛒</div>
+      <h3>目前沒有開團商品</h3>
+      <p>請稍後再回來看看，或聯絡我們了解最新團購資訊</p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <p>© 2024 小蘋果團購 · 好物共享，揪團更划算 🍎</p>
+</footer>
+
+<script type="module">
+  import { db } from './js/firebase-config.js';
+  import { collection, getDocs, query, where, orderBy, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // Load Products
+  async function loadProducts() {
+    const loading = document.getElementById('productsLoading');
+    const grid = document.getElementById('productsGrid');
+    const empty = document.getElementById('productsEmpty');
+
+    try {
+      const q = query(
+        collection(db, 'products'),
+        where('status', '==', 'active'),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+
+      loading.style.display = 'none';
+
+      if (snapshot.empty) {
+        empty.style.display = 'block';
+        return;
+      }
+
+      grid.style.display = 'grid';
+      grid.innerHTML = '';
+
+      snapshot.forEach(docSnap => {
+        const product = { id: docSnap.id, ...docSnap.data() };
+        grid.appendChild(createProductCard(product));
+      });
+
+    } catch (error) {
+      console.error('載入商品失敗:', error);
+      loading.style.display = 'none';
+      empty.style.display = 'block';
+    }
+  }
+
+  function createProductCard(product) {
+    const deadline = product.deadline ? new Date(product.deadline) : null;
+    const now = new Date();
+    const daysLeft = deadline ? Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) : null;
+    const isUrgent = daysLeft !== null && daysLeft <= 3;
+
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.id = `product-${product.id}`;
+
+    const imgContent = product.imageUrl
+      ? `<img src="${product.imageUrl}" alt="${product.name}" loading="lazy">`
+      : '🛍️';
+
+    const deadlineText = daysLeft !== null
+      ? (daysLeft <= 0 ? '已截止' : `${daysLeft} 天後截止`)
+      : '長期開團';
+
+    card.innerHTML = `
+      <div class="product-card-img">${imgContent}</div>
+      <div class="product-card-body">
+        <span class="product-card-tag">${product.category || '精選商品'}</span>
+        <h3 class="product-card-name">${escapeHtml(product.name)}</h3>
+        <p class="product-card-desc">${escapeHtml(product.description || '')}</p>
+        <div class="product-card-footer">
+          <div class="product-price">
+            NT$ ${Number(product.price).toLocaleString()}
+            <span>/ ${product.unit || '件'}</span>
+          </div>
+          <div class="product-deadline ${isUrgent ? 'urgent' : ''}">
+            ⏰ ${deadlineText}
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="goToProduct('${product.id}')">
+          立即下單
+        </button>
+      </div>
+    `;
+
+    return card;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  window.goToProduct = (id) => {
+    window.location.href = `product.html?id=${id}`;
+  };
+
+  loadProducts();
+</script>
+
+</body>
+</html>

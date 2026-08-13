@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>後台登入 — 小蘋果團購管理</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">🍎</div>
+    <h1 class="login-title">後台管理登入</h1>
+    <p class="login-subtitle">小蘋果團購 管理系統</p>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input type="email" class="form-control" id="email" placeholder="admin@example.com" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">密碼</label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="password" placeholder="••••••••" required autocomplete="current-password" style="padding-right:48px;">
+          <button type="button" id="togglePwd" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-light);" onclick="togglePassword()">👁️</button>
+        </div>
+      </div>
+
+      <div id="loginError" style="display:none;color:var(--primary-dark);background:var(--bg-section);border-radius:var(--radius-sm);padding:12px 16px;font-size:0.85rem;margin-bottom:16px;border-left:3px solid var(--primary);"></div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+        登入管理後台
+      </button>
+    </form>
+
+    <p style="margin-top:20px;font-size:0.8rem;color:var(--text-light);">
+      忘記密碼？請聯絡系統管理員
+    </p>
+  </div>
+</div>
+
+<script type="module">
+  import { auth } from '../js/firebase-config.js';
+  import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  // If already logged in, redirect
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      window.location.href = 'dashboard.html';
+    }
+  });
+
+  function showToast(msg, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${msg}`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+  }
+
+  window.handleLogin = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('loginBtn');
+    const errorDiv = document.getElementById('loginError');
+
+    btn.disabled = true;
+    btn.textContent = '登入中...';
+    errorDiv.style.display = 'none';
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = 'dashboard.html';
+    } catch (error) {
+      let msg = '登入失敗，請檢查帳號密碼';
+      if (error.code === 'auth/user-not-found') msg = '此帳號不存在';
+      else if (error.code === 'auth/wrong-password') msg = '密碼錯誤，請再試一次';
+      else if (error.code === 'auth/too-many-requests') msg = '嘗試次數過多，請稍後再試';
+      else if (error.code === 'auth/invalid-credential') msg = '帳號或密碼錯誤';
+
+      errorDiv.textContent = '⚠️ ' + msg;
+      errorDiv.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '登入管理後台';
+    }
+  };
+
+  window.togglePassword = () => {
+    const input = document.getElementById('password');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  };
+</script>
+
+</body>
+</html>
