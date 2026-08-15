@@ -83,15 +83,13 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">商品圖片</label>
+          <label class="form-label">商品圖片（最多10張）</label>
           <div class="file-upload" id="fileUploadArea">
-            <input type="file" id="pImage" accept="image/*" onchange="handleImageSelect(event)">
+            <input type="file" id="pImage" accept="image/*" multiple onchange="handleImageSelect(event)">
             <div class="file-upload-icon">📷</div>
-            <p class="file-upload-text"><strong>點擊上傳</strong>或拖放圖片（JPG, PNG, GIF）</p>
+            <p class="file-upload-text"><strong>點擊選擇多張圖片</strong>或拖放圖片至此</p>
           </div>
-          <div class="file-preview" id="imagePreview" style="display:none;">
-            <img id="previewImg" src="" alt="預覽">
-          </div>
+          <div class="image-preview-grid" id="imagePreviewGrid"></div>
           <p style="font-size:0.78rem;color:var(--text-light);margin-top:6px;" id="currentImageNote"></p>
         </div>
 
@@ -193,7 +191,9 @@
   let allProducts = [];
   let currentFilter = 'all';
   let deleteTargetId = null;
-  let selectedImageFile = null;
+  let selectedFiles = [];
+  let existingImages = [];
+  let deletedPaths = [];
 
   // Auth Guard
   onAuthStateChanged(auth, user => {
@@ -307,15 +307,79 @@
 
   // Image select
   window.handleImageSelect = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    selectedImageFile = file;
-    const reader = new FileReader();
-    reader.onload = e => {
-      document.getElementById('previewImg').src = e.target.result;
-      document.getElementById('imagePreview').style.display = 'block';
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+
+    const totalCount = existingImages.length + selectedFiles.length + files.length;
+    if (totalCount > 10) {
+      showToast('最多只能上傳 10 張圖片！', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    files.forEach(file => {
+      selectedFiles.push(file);
+    });
+
+    event.target.value = ''; // Reset input
+    renderImagePreviews();
+  };
+
+  // Render Image Previews Grid
+  function renderImagePreviews() {
+    const grid = document.getElementById('imagePreviewGrid');
+    grid.innerHTML = '';
+
+    // Render existing images
+    existingImages.forEach((img, idx) => {
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+      item.innerHTML = `
+        <img src="${img.url}" alt="現有圖片">
+        <button class="delete-btn" type="button" onclick="removeExistingImage(${idx})">✕</button>
+      `;
+      grid.appendChild(item);
+    });
+
+    // Render new selected files
+    selectedFiles.forEach((file, idx) => {
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+
+      const img = document.createElement('img');
+      img.alt = '待上傳';
+
+      const reader = new FileReader();
+      reader.onload = e => { img.src = e.target.result; };
+      reader.readAsDataURL(file);
+
+      item.appendChild(img);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-btn';
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = '✕';
+      deleteBtn.onclick = () => removeSelectedFile(idx);
+
+      item.appendChild(deleteBtn);
+      grid.appendChild(item);
+    });
+  }
+
+  // Remove existing image
+  window.removeExistingImage = (idx) => {
+    const img = existingImages[idx];
+    if (img.path) {
+      deletedPaths.push(img.path);
+    }
+    existingImages.splice(idx, 1);
+    renderImagePreviews();
+  };
+
+  // Remove new selected file
+  window.removeSelectedFile = (idx) => {
+    selectedFiles.splice(idx, 1);
+    renderImagePreviews();
   };
 
   // Open Add Modal
@@ -323,9 +387,11 @@
     document.getElementById('modalTitle').textContent = '新增商品';
     document.getElementById('productForm').reset();
     document.getElementById('editProductId').value = '';
-    document.getElementById('imagePreview').style.display = 'none';
     document.getElementById('currentImageNote').textContent = '';
-    selectedImageFile = null;
+    selectedFiles = [];
+    existingImages = [];
+    deletedPaths = [];
+    renderImagePreviews();
     document.getElementById('productModal').classList.add('show');
   };
 
@@ -344,17 +410,22 @@
     document.getElementById('pDeadline').value = product.deadline || '';
     document.getElementById('pDesc').value = product.description || '';
     document.getElementById('pStatus').value = product.status || 'active';
-    selectedImageFile = null;
 
-    if (product.imageUrl) {
-      document.getElementById('previewImg').src = product.imageUrl;
-      document.getElementById('imagePreview').style.display = 'block';
-      document.getElementById('currentImageNote').textContent = '目前圖片如上，重新選擇可替換';
-    } else {
-      document.getElementById('imagePreview').style.display = 'none';
-      document.getElementById('currentImageNote').textContent = '';
+    selectedFiles = [];
+    existingImages = [];
+    deletedPaths = [];
+
+    if (product.imageUrls && Array.isArray(product.imageUrls)) {
+      product.imageUrls.forEach((url, i) => {
+        const path = (product.imagePaths && product.imagePaths[i]) || '';
+        existingImages.push({ url, path });
+      });
+    } else if (product.imageUrl) {
+      existingImages.push({ url: product.imageUrl, path: product.imagePath || '' });
     }
 
+    renderImagePreviews();
+    document.getElementById('currentImageNote').textContent = existingImages.length > 0 ? '目前已有圖片如上，可增刪' : '';
     document.getElementById('productModal').classList.add('show');
   };
 
@@ -372,27 +443,43 @@
       return;
     }
 
+    if (existingImages.length === 0 && selectedFiles.length === 0) {
+      showToast('請至少上傳一張商品圖片！', 'error');
+      return;
+    }
+
     showLoading(true);
 
     try {
       const editId = document.getElementById('editProductId').value;
-      const existingProduct = editId ? allProducts.find(p => p.id === editId) : null;
 
-      let imageUrl = existingProduct?.imageUrl || '';
-
-      // Upload image if selected
-      if (selectedImageFile) {
-        const imgRef = ref(storage, `products/${Date.now()}_${selectedImageFile.name}`);
-        const snap = await uploadBytes(imgRef, selectedImageFile);
-        imageUrl = await getDownloadURL(snap.ref);
-
-        // Delete old image if exists
-        if (existingProduct?.imagePath) {
+      // 1. Delete removed images from storage
+      for (const path of deletedPaths) {
+        if (path) {
           try {
-            await deleteObject(ref(storage, existingProduct.imagePath));
-          } catch (e) { /* ignore */ }
+            await deleteObject(ref(storage, path));
+          } catch (e) {
+            console.error('Delete old image error:', e);
+          }
         }
       }
+
+      // 2. Upload new images to storage
+      const uploadedImages = [];
+      for (const file of selectedFiles) {
+        const path = `products/${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${file.name}`;
+        const imgRef = ref(storage, path);
+        const snap = await uploadBytes(imgRef, file);
+        const url = await getDownloadURL(snap.ref);
+        uploadedImages.push({ url, path });
+      }
+
+      // 3. Combine remaining existing images and newly uploaded images
+      const finalImages = [...existingImages, ...uploadedImages];
+      const imageUrls = finalImages.map(img => img.url);
+      const imagePaths = finalImages.map(img => img.path);
+      const imageUrl = imageUrls[0] || ''; // Cover image fallback
+      const imagePath = imagePaths[0] || '';
 
       const stockVal = document.getElementById('pStock').value;
       const productData = {
@@ -405,6 +492,9 @@
         description: document.getElementById('pDesc').value.trim(),
         status: document.getElementById('pStatus').value,
         imageUrl,
+        imagePath,
+        imageUrls,
+        imagePaths,
         updatedAt: serverTimestamp()
       };
 
@@ -431,7 +521,7 @@
     }
   };
 
-  // Delete
+  // Delete Product
   window.openDeleteModal = (id, name) => {
     deleteTargetId = id;
     document.getElementById('deleteProductName').textContent = name;
@@ -445,8 +535,23 @@
 
   window.confirmDelete = async () => {
     if (!deleteTargetId) return;
+    const product = allProducts.find(p => p.id === deleteTargetId);
     showLoading(true);
     try {
+      // Clean up all images in storage
+      if (product) {
+        const paths = product.imagePaths || (product.imagePath ? [product.imagePath] : []);
+        for (const path of paths) {
+          if (path) {
+            try {
+              await deleteObject(ref(storage, path));
+            } catch (e) {
+              console.error('Delete image storage error on delete:', e);
+            }
+          }
+        }
+      }
+
       await deleteDoc(doc(db, 'products', deleteTargetId));
       showToast('商品已刪除');
       closeDeleteModal();

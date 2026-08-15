@@ -1401,3 +1401,96 @@ textarea.form-control {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================
+   Multi-image upload & Gallery
+   ============================ */
+
+.image-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.preview-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--bg-section);
+}
+
+.preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-item .delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: rgba(232, 77, 111, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: var(--transition);
+  z-index: 10;
+}
+
+.preview-item .delete-btn:hover {
+  background: var(--primary-dark);
+  transform: scale(1.1);
+}
+
+.product-detail-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.thumbnail-list {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+
+.thumbnail-item {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--transition);
+  background: var(--bg-section);
+}
+
+.thumbnail-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-item:hover {
+  transform: translateY(-2px);
+}
+
+.thumbnail-item.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 138, 0.2);
+}
+

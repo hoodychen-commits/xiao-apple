@@ -40,9 +40,10 @@
     </nav>
 
     <div class="product-detail">
-      <!-- Left: Image -->
-      <div>
+      <!-- Left: Image Gallery -->
+      <div class="product-detail-gallery">
         <div class="product-detail-img" id="productImg">🛍️</div>
+        <div class="thumbnail-list" id="thumbnailList"></div>
       </div>
 
       <!-- Right: Info + Order Form -->
@@ -240,8 +241,38 @@
     document.getElementById('productUnit').textContent = product.unit || '件';
     document.getElementById('qtyUnit').textContent = product.unit || '件';
 
-    if (product.imageUrl) {
+    const thumbList = document.getElementById('thumbnailList');
+    thumbList.innerHTML = '';
+
+    if (product.imageUrls && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
+      document.getElementById('productImg').innerHTML = `<img src="${product.imageUrls[0]}" alt="${product.name}">`;
+      
+      if (product.imageUrls.length > 1) {
+        thumbList.style.display = 'flex';
+        product.imageUrls.forEach((url, i) => {
+          const thumb = document.createElement('div');
+          thumb.className = `thumbnail-item ${i === 0 ? 'active' : ''}`;
+          thumb.innerHTML = `<img src="${url}" alt="縮圖 ${i+1}">`;
+          
+          const switchImg = () => {
+            document.querySelectorAll('.thumbnail-item').forEach(el => el.classList.remove('active'));
+            thumb.classList.add('active');
+            document.getElementById('productImg').innerHTML = `<img src="${url}" alt="${product.name}">`;
+          };
+          
+          thumb.addEventListener('click', switchImg);
+          thumb.addEventListener('mouseenter', switchImg);
+          thumbList.appendChild(thumb);
+        });
+      } else {
+        thumbList.style.display = 'none';
+      }
+    } else if (product.imageUrl) {
       document.getElementById('productImg').innerHTML = `<img src="${product.imageUrl}" alt="${product.name}">`;
+      thumbList.style.display = 'none';
+    } else {
+      document.getElementById('productImg').innerHTML = '🛍️';
+      thumbList.style.display = 'none';
     }
 
     if (product.deadline) {
