@@ -262,6 +262,32 @@ a {
   box-shadow: 0 8px 24px rgba(109, 202, 172, 0.5);
 }
 
+.btn-danger {
+  background: #EF4444;
+  color: white;
+  border: 1px solid #DC2626;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger:hover {
+  background: #DC2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+}
+
+.btn-danger-outline {
+  background: white;
+  color: #EF4444;
+  border: 1.5px solid #FCA5A5;
+}
+
+.btn-danger-outline:hover {
+  background: #FEF2F2;
+  border-color: #EF4444;
+  color: #DC2626;
+  transform: translateY(-1px);
+}
+
 .btn-sm {
   padding: 8px 18px;
   font-size: 0.85rem;

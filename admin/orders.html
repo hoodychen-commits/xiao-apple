@@ -89,7 +89,8 @@
       <button class="modal-close" onclick="closeOrderModal()">✕</button>
     </div>
     <div class="modal-body" id="orderDetailBody"></div>
-    <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-top:1px solid var(--border);background:var(--bg);">
+    <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-top:1px solid var(--border);background:var(--bg);flex-wrap:wrap;gap:10px;">
+      <button class="btn btn-danger-outline btn-sm" onclick="deleteOrder(currentOrderId)" title="刪除此筆訂單資料">🗑️ 刪除此訂單</button>
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:0.85rem;font-weight:600;color:var(--text-dark);">手動狀態：</span>
         <select class="form-control" id="statusSelect" style="width:auto;padding:6px 12px;font-size:0.85rem;">
@@ -99,8 +100,8 @@
           <option value="cancelled">❌ 已取消</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="updateOrderStatus()">變更</button>
+        <button class="btn btn-secondary btn-sm" onclick="closeOrderModal()">關閉</button>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="closeOrderModal()">關閉</button>
     </div>
   </div>
 </div>
@@ -109,7 +110,7 @@
   import { auth, db } from '../js/firebase-config.js';
   import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import {
-    collection, getDocs, updateDoc, doc, query, orderBy
+    collection, getDocs, updateDoc, deleteDoc, doc, query, orderBy
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   let allOrders = [];
@@ -248,7 +249,10 @@
           <td>${statusMap[order.status] || '-'}</td>
           <td style="font-size:0.78rem;color:var(--text-light);white-space:nowrap;">${createdAt}</td>
           <td>
-            <button class="btn btn-secondary btn-sm" onclick="openOrderDetail('${order.id}')">詳情</button>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="btn btn-secondary btn-sm" onclick="openOrderDetail('${order.id}')">詳情</button>
+              <button class="btn btn-danger-outline btn-sm" onclick="deleteOrder('${order.id}')" title="刪除此筆訂單資料">刪除</button>
+            </div>
           </td>
         </tr>
       `;
@@ -348,6 +352,30 @@
     } catch (err) {
       console.error(err);
       showToast('更新出貨狀態失敗', 'error');
+    }
+  };
+
+  // Delete Order Record
+  window.deleteOrder = async (orderId) => {
+    if (!orderId) return;
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const confirmMsg = `確定要刪除這筆訂單資料嗎？\n\n・訂單編號：${order.orderCode || '-'}\n・訂購人：${order.buyerName || '-'}\n・電話：${order.buyerPhone || '-'}\n・金額：NT$ ${Number(order.totalAmount || 0).toLocaleString()}\n\n⚠️ 刪除後資料將無法復原！`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      await deleteDoc(doc(db, 'orders', orderId));
+      allOrders = allOrders.filter(o => o.id !== orderId);
+      showToast('🗑️ 訂單資料已成功刪除！');
+      if (currentOrderId === orderId) {
+        closeOrderModal();
+      }
+      renderOrders();
+    } catch (err) {
+      console.error(err);
+      showToast('刪除訂單失敗，請稍後再試', 'error');
     }
   };
 
