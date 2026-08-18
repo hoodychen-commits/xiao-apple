@@ -131,90 +131,204 @@
 
         <p style="color:var(--text-mid);font-size:0.95rem;line-height:1.8;" id="productDesc"></p>
 
-        <!-- Order Form -->
+        <!-- Order Form (Two-Step Checkout) -->
         <div class="order-form" id="orderForm">
-          <h3 style="margin-bottom:20px;font-size:1rem;color:var(--text-dark);">📝 填寫訂購資料</h3>
-
-          <div class="form-group">
-            <label class="form-label" for="buyerName">姓名 <span class="required">*</span></label>
-            <input type="text" class="form-control" id="buyerName" placeholder="請輸入您的姓名">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="buyerPhone">手機號碼 <span class="required">*</span></label>
-            <input type="tel" class="form-control" id="buyerPhone" placeholder="09XX-XXX-XXX">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="buyerAddress">收件地址 <span class="required">*</span></label>
-            <input type="text" class="form-control" id="buyerAddress" placeholder="請輸入收件地址">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">數量 <span class="required">*</span></label>
-            <div class="qty-control">
-              <button class="qty-btn" id="qtyMinus" type="button">−</button>
-              <input type="number" class="qty-input" id="quantity" value="1" min="1" max="999">
-              <button class="qty-btn" id="qtyPlus" type="button">+</button>
-              <span style="color:var(--text-light);font-size:0.85rem;" id="qtyUnit">件</span>
+          
+          <!-- Step Progress Indicator -->
+          <div class="checkout-steps">
+            <div class="step-indicator active" id="step1Indicator">
+              <div class="step-number">1</div>
+              <div class="step-title">填寫訂購資料</div>
+            </div>
+            <div class="step-indicator" id="step2Indicator">
+              <div class="step-number">2</div>
+              <div class="step-title">轉帳付款與對帳</div>
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">付款方式 <span class="required">*</span></label>
-            <div class="payment-options" style="grid-template-columns: 1fr;">
-              <div class="payment-option">
-                <input type="radio" name="payment" id="payTransfer" value="transfer" checked>
-                <label for="payTransfer" style="flex-direction: row; justify-content: center; gap: 12px; padding: 14px 20px;">
-                  <span class="payment-icon" style="font-size: 1.3rem;">🏦</span>
-                  銀行轉帳
-                </label>
+          <!-- Step 1: 訂購人資料與數量 -->
+          <div id="checkoutStep1">
+            <h3 style="margin-bottom:16px;font-size:1rem;color:var(--text-dark);">📝 步驟 1：填寫訂購資料</h3>
+
+            <div class="form-group">
+              <label class="form-label" for="buyerName">姓名 <span class="required">*</span></label>
+              <input type="text" class="form-control" id="buyerName" placeholder="請輸入您的姓名">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="buyerPhone">手機號碼 <span class="required">*</span></label>
+              <input type="tel" class="form-control" id="buyerPhone" placeholder="09XX-XXX-XXX">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="buyerAddress">收件地址 <span class="required">*</span></label>
+              <input type="text" class="form-control" id="buyerAddress" placeholder="請輸入收件地址">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">訂購數量 <span class="required">*</span></label>
+              <div class="qty-control">
+                <button class="qty-btn" id="qtyMinus" type="button">−</button>
+                <input type="number" class="qty-input" id="quantity" value="1" min="1" max="999">
+                <button class="qty-btn" id="qtyPlus" type="button">+</button>
+                <span style="color:var(--text-light);font-size:0.85rem;" id="qtyUnit">件</span>
               </div>
             </div>
 
-            <!-- Transfer Info -->
-            <div class="payment-info-box show" id="transferInfo">
-              <h4>🏦 銀行轉帳資訊</h4>
-              <p>銀行：<strong>國泰世華 永貞分行</strong></p>
-              <p>帳號：<strong>273506144813</strong></p>
-              <p>戶名：<strong>鍾沛蓉</strong></p>
-              <p style="margin-top:12px;font-size:0.82rem;color:var(--text-light);">轉帳後請截圖傳至我們的客服確認</p>
+            <div class="form-group">
+              <label class="form-label" for="buyerNote">備註（選填）</label>
+              <textarea class="form-control" id="buyerNote" placeholder="如有特殊需求或配送時段請備註"></textarea>
+            </div>
+
+            <!-- Mini Summary on Step 1 -->
+            <div class="order-summary" style="margin-bottom:20px;">
+              <div class="order-summary-row" id="summaryVariantRow" style="display:none;">
+                <span>選擇種類</span>
+                <span id="summaryVariant">-</span>
+              </div>
+              <div class="order-summary-row">
+                <span>商品單價</span>
+                <span id="summaryPrice">NT$ 0</span>
+              </div>
+              <div class="order-summary-row">
+                <span>小計</span>
+                <span id="summaryTotal" style="font-size:1.1rem;font-weight:700;color:var(--primary);">NT$ 0</span>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-block" type="button" onclick="goToStep2()">
+              下一步：前往付款 ➔
+            </button>
+          </div>
+
+          <!-- Step 2: 付款資訊與後五碼 -->
+          <div id="checkoutStep2" style="display:none;">
+            <h3 style="margin-bottom:16px;font-size:1rem;color:var(--text-dark);">🏦 步驟 2：確認訂單與轉帳付款</h3>
+
+            <!-- Transfer Info Box -->
+            <div class="payment-info-box show" style="margin-top:0;margin-bottom:20px;border-left-color:var(--secondary);">
+              <h4 style="color:var(--secondary);display:flex;align-items:center;gap:6px;">
+                <span>🏦</span> 銀行轉帳帳號資訊
+              </h4>
+              <p style="margin-bottom:6px;">銀行代碼：<strong>國泰世華 (013) 永貞分行</strong></p>
+              <p style="margin-bottom:6px;">轉帳帳號：<strong style="font-family:monospace;font-size:1.1rem;color:var(--primary);letter-spacing:1px;">273506144813</strong></p>
+              <p style="margin-bottom:8px;">帳戶戶名：<strong>鍾沛蓉</strong></p>
+              <p style="font-size:0.82rem;color:var(--text-light);border-top:1px dashed var(--border);padding-top:8px;margin-top:8px;">
+                💡 請先將訂單總金額轉帳至上述帳戶，並於下方填寫您的末五碼以便快速對帳。
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="bankLast5">
+                您的轉帳帳號末五碼
+                <span style="font-size:0.75rem;color:var(--text-light);font-weight:normal;">（若尚未轉帳可稍後在完成頁補填）</span>
+              </label>
+              <input type="text" class="form-control" id="bankLast5" placeholder="例如：12345" maxlength="10">
+            </div>
+
+            <!-- Complete Order Summary -->
+            <div class="order-summary" id="orderSummary" style="margin-bottom:20px;">
+              <div class="order-summary-row">
+                <span>訂購人</span>
+                <span id="confirmBuyerName">-</span>
+              </div>
+              <div class="order-summary-row">
+                <span>聯絡手機</span>
+                <span id="confirmBuyerPhone">-</span>
+              </div>
+              <div class="order-summary-row" id="confirmVariantRow" style="display:none;">
+                <span>選擇規格</span>
+                <span id="confirmVariant">-</span>
+              </div>
+              <div class="order-summary-row">
+                <span>數量</span>
+                <span id="confirmQty">× 1</span>
+              </div>
+              <div class="order-summary-row">
+                <span>✨ 應付總金額</span>
+                <span id="confirmTotal" style="font-size:1.2rem;font-weight:800;color:var(--primary);">NT$ 0</span>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:12px;">
+              <button class="btn btn-secondary" type="button" onclick="goToStep1()" style="flex:1;">
+                ← 返回修改
+              </button>
+              <button class="btn btn-primary" id="submitBtn" onclick="submitOrder()" style="flex:2;">
+                🎉 確認送出訂單
+              </button>
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="buyerNote">備註（選填）</label>
-            <textarea class="form-control" id="buyerNote" placeholder="如有特殊需求請備註"></textarea>
-          </div>
-
-          <!-- Order Summary -->
-          <div class="order-summary" id="orderSummary">
-            <div class="order-summary-row" id="summaryVariantRow" style="display:none;">
-              <span>選擇種類</span>
-              <span id="summaryVariant">-</span>
-            </div>
-            <div class="order-summary-row">
-              <span>商品單價</span>
-              <span id="summaryPrice">NT$ 0</span>
-            </div>
-            <div class="order-summary-row">
-              <span>數量</span>
-              <span id="summaryQty">× 1</span>
-            </div>
-            <div class="order-summary-row">
-              <span>✨ 訂單總金額</span>
-              <span id="summaryTotal">NT$ 0</span>
-            </div>
-          </div>
-
-          <button class="btn btn-primary btn-block" id="submitBtn" onclick="submitOrder()">
-            🎉 確認下單
-          </button>
         </div>
       </div>
     </div>
+
+    <!-- Product Reviews & Ratings Section -->
+    <div class="reviews-container" id="reviewsContainer">
+      <div class="reviews-header">
+        <div class="reviews-summary">
+          <div class="rating-score" id="avgRatingScore">5.0</div>
+          <div>
+            <div class="star-rating-display" id="avgStarsDisplay">⭐⭐⭐⭐⭐</div>
+            <div class="reviews-count-text" id="reviewsCountText">共 0 則買家評價</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="openReviewModal()">
+          ✍️ 撰寫商品評價
+        </button>
+      </div>
+
+      <!-- Reviews List Grid -->
+      <div class="reviews-grid" id="reviewsListGrid">
+        <div style="text-align:center;padding:32px;color:var(--text-light);" id="reviewsEmpty">
+          🌟 尚無買家評價，成為第一個評價此商品的人吧！
+        </div>
+      </div>
+    </div>
+
   </div>
 </main>
+
+<!-- Review Modal -->
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 class="modal-title">⭐ 為商品留下評價</h3>
+      <button class="modal-close" onclick="closeReviewModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="reviewForm" onsubmit="handleReviewSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">商品評分 <span class="required">*</span></label>
+          <div class="star-picker" id="starPicker">
+            <span class="star active" data-rating="1">★</span>
+            <span class="star active" data-rating="2">★</span>
+            <span class="star active" data-rating="3">★</span>
+            <span class="star active" data-rating="4">★</span>
+            <span class="star active" data-rating="5">★</span>
+          </div>
+          <input type="hidden" id="reviewRating" value="5">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reviewerName">您的稱呼 / 暱稱 <span class="required">*</span></label>
+          <input type="text" class="form-control" id="reviewerName" placeholder="例如：陳小姐、林先生、小蘋果粉絲" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reviewComment">心得評價 <span class="required">*</span></label>
+          <textarea class="form-control" id="reviewComment" placeholder="分享您對商品的品質、包裝或口感的真實心得..." required style="min-height:100px;"></textarea>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeReviewModal()" style="flex:1;">取消</button>
+          <button type="submit" class="btn btn-primary" id="submitReviewBtn" style="flex:2;">送出評價 ✨</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <!-- Closed State -->
 <div id="closedState" style="display:none;">
@@ -235,13 +349,14 @@
 <script type="module">
   import { db } from './js/firebase-config.js';
   import {
-    doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, increment
+    doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, increment, query, where, getDocs
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const params = new URLSearchParams(window.location.search);
   const productId = params.get('id');
   let currentProduct = null;
   let selectedVariantIndex = 0;
+  let allReviews = [];
 
   function showToast(msg, type = 'success') {
     const container = document.getElementById('toastContainer');
@@ -258,325 +373,217 @@
     return div.innerHTML;
   }
 
-  async function loadProduct() {
-    if (!productId) {
-      window.location.href = 'index.html';
-      return;
-    }
-
-    try {
-      const docRef = doc(db, 'products', productId);
-      const docSnap = await getDoc(docRef);
-
-      document.getElementById('pageLoading').style.display = 'none';
-
-      if (!docSnap.exists() || docSnap.data().status !== 'active') {
-        document.getElementById('closedState').style.display = 'flex';
-        return;
-      }
-
-      currentProduct = { id: docSnap.id, ...docSnap.data() };
-
-      // Check deadline
-      if (currentProduct.deadline) {
-        const deadline = new Date(currentProduct.deadline);
-        if (deadline < new Date()) {
-          document.getElementById('closedState').style.display = 'flex';
-          // Update product status
-          await updateDoc(docRef, { status: 'ended' });
-          return;
-        }
-      }
-
-      // Track view
-      await updateDoc(docRef, { views: increment(1) });
-
-      renderProduct(currentProduct);
-      document.getElementById('mainContent').style.display = 'block';
-
-    } catch (error) {
-      console.error(error);
-      document.getElementById('pageLoading').style.display = 'none';
-      document.getElementById('closedState').style.display = 'flex';
-    }
-  }
-
-  function getSelectedVariant() {
-    if (currentProduct.variants && Array.isArray(currentProduct.variants) && currentProduct.variants.length > 0) {
-      return currentProduct.variants[selectedVariantIndex] || currentProduct.variants[0];
-    }
-    // 向下相容
-    return { name: '', price: currentProduct.price, stock: currentProduct.stock };
-  }
-
-  function renderProduct(product) {
-    document.title = `${product.name} — 小蘋果團購`;
-
-    document.getElementById('breadcrumbName').textContent = product.name;
-    document.getElementById('productName').textContent = product.name;
-    document.getElementById('productCategory').textContent = product.category || '精選商品';
-    document.getElementById('productDesc').textContent = product.description || '';
-    document.getElementById('productUnit').textContent = product.unit || '件';
-    document.getElementById('qtyUnit').textContent = product.unit || '件';
-
-    // Image gallery
-    const thumbList = document.getElementById('thumbnailList');
-    thumbList.innerHTML = '';
-
-    if (product.imageUrls && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
-      document.getElementById('productImg').innerHTML = `<img src="${product.imageUrls[0]}" alt="${product.name}">`;
-      
-      if (product.imageUrls.length > 1) {
-        thumbList.style.display = 'flex';
-        product.imageUrls.forEach((url, i) => {
-          const thumb = document.createElement('div');
-          thumb.className = `thumbnail-item ${i === 0 ? 'active' : ''}`;
-          thumb.innerHTML = `<img src="${url}" alt="縮圖 ${i+1}">`;
-          
-          const switchImg = () => {
-            document.querySelectorAll('.thumbnail-item').forEach(el => el.classList.remove('active'));
-            thumb.classList.add('active');
-            document.getElementById('productImg').innerHTML = `<img src="${url}" alt="${product.name}">`;
-          };
-          
-          thumb.addEventListener('click', switchImg);
-          thumb.addEventListener('mouseenter', switchImg);
-          thumbList.appendChild(thumb);
-        });
-      } else {
-        thumbList.style.display = 'none';
-      }
-    } else if (product.imageUrl) {
-      document.getElementById('productImg').innerHTML = `<img src="${product.imageUrl}" alt="${product.name}">`;
-      thumbList.style.display = 'none';
-    } else {
-      document.getElementById('productImg').innerHTML = '🛍️';
-      thumbList.style.display = 'none';
-    }
-
-    // Deadline
-    if (product.deadline) {
-      const d = new Date(product.deadline);
-      const daysLeft = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
-      document.getElementById('productDeadline').textContent =
-        `${d.toLocaleDateString('zh-TW')}（剩 ${daysLeft} 天）`;
-      if (daysLeft <= 3) {
-        document.getElementById('productDeadline').style.color = 'var(--primary)';
-        document.getElementById('productDeadline').style.fontWeight = '700';
-      }
-    }
-
-    // Variant selector
-    if (product.variants && Array.isArray(product.variants) && product.variants.length > 1) {
-      renderVariantSelector(product.variants);
-      document.getElementById('variantSelectorSection').style.display = 'block';
-    } else {
-      document.getElementById('variantSelectorSection').style.display = 'none';
-    }
-
-    // Set initial variant
-    selectedVariantIndex = 0;
-    updateVariantDisplay();
-  }
-
-  function renderVariantSelector(variants) {
-    const selector = document.getElementById('variantSelector');
-    selector.innerHTML = '';
-
-    variants.forEach((v, i) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `variant-btn ${i === 0 ? 'active' : ''}`;
-
-      const isSoldOut = v.stock !== undefined && v.stock <= 0;
-      if (isSoldOut) btn.classList.add('sold-out');
-
-      let stockText = '';
-      if (v.stock !== undefined) {
-        stockText = v.stock <= 0 ? '已售完' : `庫存 ${v.stock}`;
-      }
-
-      btn.innerHTML = `
-        <span>${escapeHtml(v.name || '預設')}</span>
-        <span class="variant-price">NT$ ${Number(v.price).toLocaleString()}</span>
-        ${stockText ? `<span class="variant-stock-info">${stockText}</span>` : ''}
-      `;
-
-      btn.addEventListener('click', () => {
-        if (isSoldOut) return;
-        selectedVariantIndex = i;
-        document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        updateVariantDisplay();
-      });
-
-      selector.appendChild(btn);
-    });
-  }
-
-  function updateVariantDisplay() {
-    const variant = getSelectedVariant();
-    const price = variant.price || 0;
-
-    // Update price display
-    document.getElementById('productPrice').textContent = `NT$ ${Number(price).toLocaleString()}`;
-
-    // Update stock display
-    const stockEl = document.getElementById('productStock');
-    const submitBtn = document.getElementById('submitBtn');
-
-    if (variant.stock !== undefined) {
-      if (variant.stock <= 0) {
-        stockEl.textContent = '已售完';
-        stockEl.style.color = 'var(--primary)';
-        submitBtn.disabled = true;
-        submitBtn.textContent = '已售完';
-      } else if (variant.stock <= 10) {
-        stockEl.textContent = `僅剩 ${variant.stock} ${currentProduct.unit || '件'}`;
-        stockEl.style.color = 'var(--primary)';
-        submitBtn.disabled = false;
-        submitBtn.textContent = '🎉 確認下單';
-      } else {
-        stockEl.textContent = `${variant.stock} ${currentProduct.unit || '件'}`;
-        stockEl.style.color = '';
-        submitBtn.disabled = false;
-        submitBtn.textContent = '🎉 確認下單';
-      }
-    } else {
-      stockEl.textContent = '充足';
-      stockEl.style.color = '';
-      submitBtn.disabled = false;
-      submitBtn.textContent = '🎉 確認下單';
-    }
-
-    // Update summary
-    const hasVariants = currentProduct.variants && currentProduct.variants.length > 1;
-    const variantRow = document.getElementById('summaryVariantRow');
-    if (hasVariants && variant.name) {
-      variantRow.style.display = 'flex';
-      document.getElementById('summaryVariant').textContent = variant.name;
-    } else {
-      variantRow.style.display = 'none';
-    }
-
-    updateSummary();
-  }
-
-  function updateSummary() {
-    if (!currentProduct) return;
-    const qty = parseInt(document.getElementById('quantity').value) || 1;
-    const variant = getSelectedVariant();
-    const price = variant.price || 0;
-    const total = qty * price;
-
-    document.getElementById('summaryPrice').textContent = `NT$ ${Number(price).toLocaleString()}`;
-    document.getElementById('summaryQty').textContent = `× ${qty}`;
-    document.getElementById('summaryTotal').textContent = `NT$ ${Number(total).toLocaleString()}`;
-  }
-
-  // Quantity controls
-  document.getElementById('qtyPlus').addEventListener('click', () => {
-    const input = document.getElementById('quantity');
-    input.value = Math.min(999, parseInt(input.value || 1) + 1);
-    updateSummary();
-  });
-
-  document.getElementById('qtyMinus').addEventListener('click', () => {
-    const input = document.getElementById('quantity');
-    input.value = Math.max(1, parseInt(input.value || 1) - 1);
-    updateSummary();
-  });
-
-  document.getElementById('quantity').addEventListener('input', updateSummary);
-
-  // Payment method toggle
-  document.querySelectorAll('input[name="payment"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      document.getElementById('transferInfo').classList.remove('show');
-      if (radio.value === 'transfer') {
-        document.getElementById('transferInfo').classList.add('show');
-      }
-    });
-  });
-
-  // Submit Order
-  window.submitOrder = async () => {
+  // === Checkout Steps Navigation ===
+  window.goToStep2 = () => {
     const name = document.getElementById('buyerName').value.trim();
     const phone = document.getElementById('buyerPhone').value.trim();
     const address = document.getElementById('buyerAddress').value.trim();
     const qty = parseInt(document.getElementById('quantity').value) || 1;
-    const payment = document.querySelector('input[name="payment"]:checked');
-    const note = document.getElementById('buyerNote').value.trim();
 
     if (!name || !phone || !address) {
-      showToast('請填寫姓名、手機號碼和地址', 'error');
-      return;
-    }
-
-    if (!payment) {
-      showToast('請選擇付款方式', 'error');
+      showToast('請填寫完整姓名、手機號碼與收件地址', 'error');
       return;
     }
 
     const variant = getSelectedVariant();
-
-    // Check if selected variant has enough stock
     if (variant.stock !== undefined && variant.stock < qty) {
-      showToast(`庫存不足！「${variant.name || '此商品'}」僅剩 ${variant.stock} ${currentProduct.unit || '件'}`, 'error');
+      showToast(`庫存不足！「${variant.name || '此規格'}」僅剩 ${variant.stock} ${currentProduct.unit || '件'}`, 'error');
       return;
     }
 
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.textContent = '送出中...';
+    // Populate Step 2 confirmation
+    document.getElementById('confirmBuyerName').textContent = name;
+    document.getElementById('confirmBuyerPhone').textContent = phone;
+    document.getElementById('confirmQty').textContent = `× ${qty} ${currentProduct.unit || '件'}`;
+    
+    const price = variant.price || 0;
+    const total = qty * price;
+    document.getElementById('confirmTotal').textContent = `NT$ ${Number(total).toLocaleString()}`;
+
+    if (variant.name) {
+      document.getElementById('confirmVariantRow').style.display = 'flex';
+      document.getElementById('confirmVariant').textContent = variant.name;
+    } else {
+      document.getElementById('confirmVariantRow').style.display = 'none';
+    }
+
+    // Switch view
+    document.getElementById('checkoutStep1').style.display = 'none';
+    document.getElementById('checkoutStep2').style.display = 'block';
+
+    document.getElementById('step1Indicator').classList.add('completed');
+    document.getElementById('step1Indicator').classList.remove('active');
+    document.getElementById('step2Indicator').classList.add('active');
+  };
+
+  window.goToStep1 = () => {
+    document.getElementById('checkoutStep2').style.display = 'none';
+    document.getElementById('checkoutStep1').style.display = 'block';
+
+    document.getElementById('step2Indicator').classList.remove('active');
+    document.getElementById('step1Indicator').classList.remove('completed');
+    document.getElementById('step1Indicator').classList.add('active');
+  };
+
+  // === Product Reviews ===
+  async function loadProductReviews() {
+    if (!productId) return;
+    try {
+      const q = query(collection(db, 'reviews'), where('productId', '==', productId));
+      const snap = await getDocs(q);
+      allReviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      allReviews.sort((a, b) => {
+        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+        return timeB - timeA;
+      });
+
+      renderReviews();
+    } catch (err) {
+      console.warn('載入評價列表錯誤 (可能無評價):', err);
+    }
+  }
+
+  function renderReviews() {
+    const listGrid = document.getElementById('reviewsListGrid');
+    const emptyMsg = document.getElementById('reviewsEmpty');
+    const countText = document.getElementById('reviewsCountText');
+    const scoreEl = document.getElementById('avgRatingScore');
+    const starsEl = document.getElementById('avgStarsDisplay');
+
+    if (allReviews.length === 0) {
+      if (emptyMsg) emptyMsg.style.display = 'block';
+      countText.textContent = '共 0 則買家評價';
+      scoreEl.textContent = '5.0';
+      starsEl.innerHTML = '⭐⭐⭐⭐⭐';
+      return;
+    }
+
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    // Calculate Average
+    const sum = allReviews.reduce((acc, r) => acc + (Number(r.rating) || 5), 0);
+    const avg = (sum / allReviews.length).toFixed(1);
+    scoreEl.textContent = avg;
+    countText.textContent = `共 ${allReviews.length} 則買家評價`;
+
+    // Star display
+    const roundAvg = Math.round(Number(avg));
+    starsEl.innerHTML = '⭐'.repeat(roundAvg) + (roundAvg < 5 ? '☆'.repeat(5 - roundAvg) : '');
+
+    listGrid.innerHTML = allReviews.map(r => {
+      const starsStr = '⭐'.repeat(r.rating || 5);
+      const dateStr = r.createdAt?.toDate 
+        ? r.createdAt.toDate().toLocaleDateString('zh-TW', { year:'numeric', month:'numeric', day:'numeric' })
+        : '最新評價';
+
+      return `
+        <div class="review-card">
+          <div class="review-top">
+            <div class="reviewer-name">
+              <span>👤 ${escapeHtml(r.reviewerName || '買家')}</span>
+              <span class="verified-badge">已購買認證</span>
+            </div>
+            <div class="review-date">${dateStr}</div>
+          </div>
+          <div style="font-size:0.95rem;margin-bottom:8px;">${starsStr}</div>
+          <div class="review-comment">${escapeHtml(r.comment || '')}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Star Picker in Review Modal
+  let selectedRating = 5;
+  const starElements = document.querySelectorAll('#starPicker .star');
+  starElements.forEach(star => {
+    star.addEventListener('click', () => {
+      selectedRating = parseInt(star.dataset.rating);
+      document.getElementById('reviewRating').value = selectedRating;
+      updateStarPicker();
+    });
+
+    star.addEventListener('mouseenter', () => {
+      const hoverRating = parseInt(star.dataset.rating);
+      starElements.forEach(s => {
+        if (parseInt(s.dataset.rating) <= hoverRating) {
+          s.classList.add('hovered');
+        } else {
+          s.classList.remove('hovered');
+        }
+      });
+    });
+  });
+
+  document.getElementById('starPicker').addEventListener('mouseleave', () => {
+    starElements.forEach(s => s.classList.remove('hovered'));
+  });
+
+  function updateStarPicker() {
+    starElements.forEach(s => {
+      if (parseInt(s.dataset.rating) <= selectedRating) {
+        s.classList.add('active');
+      } else {
+        s.classList.remove('active');
+      }
+    });
+  }
+
+  window.openReviewModal = () => {
+    document.getElementById('reviewForm').reset();
+    selectedRating = 5;
+    document.getElementById('reviewRating').value = 5;
+    updateStarPicker();
+    document.getElementById('reviewModal').classList.add('show');
+  };
+
+  window.closeReviewModal = () => {
+    document.getElementById('reviewModal').classList.remove('show');
+  };
+
+  window.handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('reviewerName').value.trim();
+    const comment = document.getElementById('reviewComment').value.trim();
+    const rating = parseInt(document.getElementById('reviewRating').value) || 5;
+
+    if (!name || !comment) {
+      showToast('請填寫稱呼與心得評價', 'error');
+      return;
+    }
+
+    const submitBtn = document.getElementById('submitReviewBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送出中...';
 
     try {
-      const total = qty * variant.price;
-      const orderCode = `AP${Date.now().toString(36).toUpperCase()}`;
-
-      const orderData = {
-        orderCode,
-        productId: currentProduct.id,
-        productName: currentProduct.name,
-        productPrice: variant.price,
-        productUnit: currentProduct.unit || '件',
-        quantity: qty,
-        totalAmount: total,
-        buyerName: name,
-        buyerPhone: phone,
-        buyerAddress: address,
-        paymentMethod: payment.value === 'credit' ? '刷卡' : '銀行轉帳',
-        note,
-        status: 'pending',
+      const reviewData = {
+        productId,
+        productName: currentProduct?.name || '',
+        reviewerName: name,
+        rating,
+        comment,
         createdAt: serverTimestamp()
       };
 
-      // 加入種類資訊
-      if (variant.name) {
-        orderData.variantName = variant.name;
-      }
-
-      await addDoc(collection(db, 'orders'), orderData);
-
-      // Save to sessionStorage for success page
-      sessionStorage.setItem('lastOrder', JSON.stringify({
-        orderCode,
-        productName: currentProduct.name,
-        variantName: variant.name || '',
-        quantity: qty,
-        totalAmount: total,
-        paymentMethod: payment.value
-      }));
-
-      window.location.href = 'order-success.html';
-
-    } catch (error) {
-      console.error(error);
-      showToast('下單失敗，請稍後再試', 'error');
-      btn.disabled = false;
-      btn.textContent = '🎉 確認下單';
+      await addDoc(collection(db, 'reviews'), reviewData);
+      showToast('感謝您的寶貴評價！✨');
+      closeReviewModal();
+      await loadProductReviews();
+    } catch (err) {
+      console.error(err);
+      showToast('評價送出失敗，請稍後再試', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '送出評價 ✨';
     }
   };
+
+  // Close review modal on overlay click
+  document.getElementById('reviewModal').addEventListener('click', function(e) {
+    if (e.target === this) closeReviewModal();
+  });
 
   loadProduct();
 </script>
