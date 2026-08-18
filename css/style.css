@@ -1764,5 +1764,71 @@ textarea.form-control {
   background: #059669;
 }
 
+.btn-ship-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-ship-toggle.unshipped {
+  background: #F3F4F6;
+  color: #4B5563;
+  border-color: #D1D5DB;
+}
+
+.btn-ship-toggle.unshipped:hover {
+  background: #E5E7EB;
+  border-color: #9CA3AF;
+  transform: translateY(-1px);
+}
+
+.btn-ship-toggle.shipped {
+  background: #3B82F6;
+  color: white;
+  border-color: #2563EB;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.btn-ship-toggle.shipped:hover {
+  background: #2563EB;
+}
+
+.order-customer-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.86rem;
+}
+
+.order-customer-name {
+  font-weight: 700;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.order-customer-phone {
+  color: var(--text-mid);
+  font-family: monospace;
+  font-size: 0.82rem;
+}
+
+.order-customer-address {
+  color: var(--text-mid);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  word-break: break-all;
+  max-width: 200px;
+}
+
 
 

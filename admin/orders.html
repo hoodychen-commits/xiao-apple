@@ -65,10 +65,11 @@
             <th>訂單編號</th>
             <th>訂購商品</th>
             <th>訂購人 / 電話</th>
-            <th>收件地址</th>
+            <th>收貨地址</th>
             <th>數量 / 金額</th>
-            <th>匯款後五碼</th>
-            <th>對帳確認</th>
+            <th>銀行後五碼</th>
+            <th>付款確認 (打勾)</th>
+            <th>出貨確認 (打勾)</th>
             <th>訂單狀態</th>
             <th>下單時間</th>
             <th>操作</th>
@@ -82,7 +83,7 @@
 
 <!-- Order Detail Modal -->
 <div class="modal-overlay" id="orderDetailModal">
-  <div class="modal" style="max-width:580px;">
+  <div class="modal" style="max-width:620px;">
     <div class="modal-header">
       <h3 class="modal-title">🧾 訂單完整資訊</h3>
       <button class="modal-close" onclick="closeOrderModal()">✕</button>
@@ -90,15 +91,16 @@
     <div class="modal-body" id="orderDetailBody"></div>
     <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-top:1px solid var(--border);background:var(--bg);">
       <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:0.85rem;font-weight:600;color:var(--text-dark);">更新訂單狀態：</span>
+        <span style="font-size:0.85rem;font-weight:600;color:var(--text-dark);">手動狀態：</span>
         <select class="form-control" id="statusSelect" style="width:auto;padding:6px 12px;font-size:0.85rem;">
           <option value="pending">⏳ 待付款</option>
           <option value="paid">✅ 已付款</option>
           <option value="shipped">📦 已出貨</option>
           <option value="cancelled">❌ 已取消</option>
         </select>
+        <button class="btn btn-primary btn-sm" onclick="updateOrderStatus()">變更</button>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="updateOrderStatus()">儲存更新</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeOrderModal()">關閉</button>
     </div>
   </div>
 </div>
@@ -201,24 +203,34 @@
         ? `<span class="bank-last5-badge">末五碼 ${escapeHtml(order.bankLast5)}</span>`
         : `<span style="color:var(--text-light);font-size:0.8rem;">⏳ 待回填</span>`;
 
-      const isVerified = Boolean(order.isBankVerified);
-      const verifyBtnHtml = isVerified
-        ? `<button class="btn-verify-toggle verified" onclick="toggleBankVerified('${order.id}', false)" title="點擊取消對帳">✅ 對帳正確</button>`
-        : `<button class="btn-verify-toggle unverified" onclick="toggleBankVerified('${order.id}', true)" title="確認收到款項請點擊打勾">⬜ 待核對</button>`;
+      const isPaid = order.status === 'paid' || order.status === 'shipped' || Boolean(order.isBankVerified);
+      const isShipped = order.status === 'shipped' || Boolean(order.isShipped);
+
+      const payBtnHtml = isPaid
+        ? `<button class="btn-verify-toggle verified" onclick="togglePaymentStatus('${order.id}', false)" title="點擊取消付款確認">✅ 已付款</button>`
+        : `<button class="btn-verify-toggle unverified" onclick="togglePaymentStatus('${order.id}', true)" title="確認後五碼正確，點擊打勾確認付款">⬜ 確認付款</button>`;
+
+      const shipBtnHtml = isShipped
+        ? `<button class="btn-ship-toggle shipped" onclick="toggleShippingStatus('${order.id}', false)" title="點擊取消出貨">📦 已出貨</button>`
+        : `<button class="btn-ship-toggle unshipped" onclick="toggleShippingStatus('${order.id}', true)" title="商品已寄出，點擊打勾確認出貨">⬜ 確認出貨</button>`;
 
       return `
         <tr>
           <td style="font-family:monospace;font-weight:700;color:var(--primary);font-size:0.85rem;">${order.orderCode || '-'}</td>
-          <td style="max-width:140px;font-size:0.88rem;">
+          <td style="max-width:130px;font-size:0.88rem;">
             <strong>${escapeHtml(order.productName || '-')}</strong>
             ${order.variantName ? `<br><small style="color:var(--text-mid);background:#FFF0F4;padding:1px 6px;border-radius:4px;">規格: ${escapeHtml(order.variantName)}</small>` : ''}
           </td>
           <td>
-            <div style="font-weight:600;color:var(--text-dark);">${escapeHtml(order.buyerName || '-')}</div>
-            <div style="font-size:0.82rem;color:var(--text-mid);font-family:monospace;">📞 ${escapeHtml(order.buyerPhone || '-')}</div>
+            <div class="order-customer-box">
+              <div class="order-customer-name">👤 ${escapeHtml(order.buyerName || '-')}</div>
+              <div class="order-customer-phone">📞 ${escapeHtml(order.buyerPhone || '-')}</div>
+            </div>
           </td>
-          <td style="max-width:180px;font-size:0.82rem;color:var(--text-mid);word-break:break-all;">
-            📍 ${escapeHtml(order.buyerAddress || '-')}
+          <td>
+            <div class="order-customer-address">
+              📍 ${escapeHtml(order.buyerAddress || '-')}
+            </div>
           </td>
           <td>
             <div style="font-size:0.85rem;">${order.quantity || 1} ${order.productUnit || '件'}</div>
@@ -228,7 +240,10 @@
             ${bankLast5Badge}
           </td>
           <td>
-            ${verifyBtnHtml}
+            ${payBtnHtml}
+          </td>
+          <td>
+            ${shipBtnHtml}
           </td>
           <td>${statusMap[order.status] || '-'}</td>
           <td style="font-size:0.78rem;color:var(--text-light);white-space:nowrap;">${createdAt}</td>
@@ -262,36 +277,77 @@
     renderOrders();
   };
 
-  // Toggle Bank Reconciliation Checkmark
-  window.toggleBankVerified = async (orderId, targetState) => {
+  // Toggle Payment Status (Bank Reconciliation Checkmark)
+  window.togglePaymentStatus = async (orderId, targetPaid) => {
     const order = allOrders.find(o => o.id === orderId);
     if (!order) return;
 
     try {
       const updateData = {
-        isBankVerified: targetState,
+        isBankVerified: targetPaid,
         updatedAt: new Date()
       };
 
-      // If manager marks as verified and status was pending, auto-suggest or set to 'paid'
-      if (targetState && order.status === 'pending') {
+      if (targetPaid) {
         updateData.status = 'paid';
+        updateData.paidAt = new Date();
         order.status = 'paid';
+        order.isBankVerified = true;
+      } else {
+        updateData.status = 'pending';
+        updateData.isShipped = false;
+        order.status = 'pending';
+        order.isBankVerified = false;
+        order.isShipped = false;
       }
 
       await updateDoc(doc(db, 'orders', orderId), updateData);
-      order.isBankVerified = targetState;
-
-      showToast(targetState ? '✅ 已確認對帳正確（已更新為已付款）！' : '已取消對帳標記');
+      showToast(targetPaid ? '✅ 已確認付款（末五碼正確）！' : '已切換為待付款狀態');
       renderOrders();
 
-      // If modal is open, re-render modal content
       if (currentOrderId === orderId) {
         openOrderDetail(orderId);
       }
     } catch (err) {
       console.error(err);
-      showToast('更新對帳狀態失敗', 'error');
+      showToast('更新付款狀態失敗', 'error');
+    }
+  };
+
+  // Toggle Shipping Status (Shipment Checkmark)
+  window.toggleShippingStatus = async (orderId, targetShipped) => {
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    try {
+      const updateData = {
+        isShipped: targetShipped,
+        updatedAt: new Date()
+      };
+
+      if (targetShipped) {
+        updateData.status = 'shipped';
+        updateData.isBankVerified = true; // Auto mark payment confirmed if shipped
+        updateData.shippedAt = new Date();
+        order.status = 'shipped';
+        order.isShipped = true;
+        order.isBankVerified = true;
+      } else {
+        updateData.status = 'paid';
+        order.status = 'paid';
+        order.isShipped = false;
+      }
+
+      await updateDoc(doc(db, 'orders', orderId), updateData);
+      showToast(targetShipped ? '📦 已確認出貨！' : '已切換為已付款（待出貨）');
+      renderOrders();
+
+      if (currentOrderId === orderId) {
+        openOrderDetail(orderId);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('更新出貨狀態失敗', 'error');
     }
   };
 
@@ -304,7 +360,8 @@
       ? order.createdAt.toDate().toLocaleString('zh-TW')
       : '-';
 
-    const isVerified = Boolean(order.isBankVerified);
+    const isPaid = order.status === 'paid' || order.status === 'shipped' || Boolean(order.isBankVerified);
+    const isShipped = order.status === 'shipped' || Boolean(order.isShipped);
 
     document.getElementById('orderDetailBody').innerHTML = `
       <div style="display:grid;gap:14px;">
@@ -319,25 +376,41 @@
           </div>
         </div>
 
-        <!-- Bank Reconciliation & Verification Checkmark Box -->
-        <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius-sm);padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-          <div>
-            <div style="font-size:0.8rem;color:#1E40AF;font-weight:600;margin-bottom:4px;">🏦 買家匯款對帳後五碼</div>
-            <div style="font-size:1.2rem;font-weight:800;color:#1D4ED8;font-family:monospace;letter-spacing:1px;">
-              ${order.bankLast5 ? `末五碼：${escapeHtml(order.bankLast5)}` : '⏳ 買家尚未填寫末五碼'}
+        <!-- Checkmark Controls for Payment & Shipping -->
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:var(--radius-sm);padding:16px;display:grid;gap:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:1px solid #EDF2F7;padding-bottom:10px;">
+            <div>
+              <div style="font-size:0.8rem;color:#1E40AF;font-weight:600;">🏦 買家匯款末五碼</div>
+              <div style="font-size:1.15rem;font-weight:800;color:#1D4ED8;font-family:monospace;margin-top:2px;">
+                ${order.bankLast5 ? `末五碼：${escapeHtml(order.bankLast5)}` : '⏳ 尚未填寫末五碼'}
+              </div>
+            </div>
+            <div>
+              <button class="btn-verify-toggle ${isPaid ? 'verified' : 'unverified'}" onclick="togglePaymentStatus('${order.id}', ${!isPaid})" style="padding:8px 16px;font-size:0.88rem;">
+                ${isPaid ? '✅ 後五碼已核對（點擊取消）' : '⬜ 打勾確認付款 ✔'}
+              </button>
             </div>
           </div>
-          <div>
-            <button class="btn-verify-toggle ${isVerified ? 'verified' : 'unverified'}" onclick="toggleBankVerified('${order.id}', ${!isVerified})" style="padding:8px 16px;font-size:0.9rem;">
-              ${isVerified ? '✅ 已確認對帳正確（點擊取消）' : '⬜ 點擊確認對帳正確 ✔'}
-            </button>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-size:0.8rem;color:#374151;font-weight:600;">📦 出貨狀態</div>
+              <div style="font-size:0.92rem;font-weight:700;color:${isShipped ? '#2563EB' : '#6B7280'};margin-top:2px;">
+                ${isShipped ? '🚚 已出貨寄出' : '⏳ 待安排出貨'}
+              </div>
+            </div>
+            <div>
+              <button class="btn-ship-toggle ${isShipped ? 'shipped' : 'unshipped'}" onclick="toggleShippingStatus('${order.id}', ${!isShipped})" style="padding:8px 16px;font-size:0.88rem;">
+                ${isShipped ? '📦 已出貨（點擊取消）' : '⬜ 打勾確認出貨 ✔'}
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Buyer Info Box -->
         <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;">
           <h4 style="font-size:0.9rem;color:var(--text-dark);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-            <span>👤</span> 訂購人收件資訊
+            <span>👤</span> 訂購人收貨資訊
           </h4>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.9rem;margin-bottom:10px;">
             <div>
@@ -350,7 +423,7 @@
             </div>
           </div>
           <div>
-            <span style="color:var(--text-light);font-size:0.8rem;display:block;">收件地址</span>
+            <span style="color:var(--text-light);font-size:0.8rem;display:block;">收貨地址</span>
             <div style="color:var(--text-dark);font-weight:500;background:var(--bg);padding:8px 12px;border-radius:6px;margin-top:2px;">
               📍 ${escapeHtml(order.buyerAddress || '-')}
             </div>
@@ -395,9 +468,19 @@
     if (!currentOrderId) return;
     const newStatus = document.getElementById('statusSelect').value;
     try {
-      await updateDoc(doc(db, 'orders', currentOrderId), { status: newStatus, updatedAt: new Date() });
+      const updateData = { status: newStatus, updatedAt: new Date() };
+      if (newStatus === 'paid') updateData.isBankVerified = true;
+      if (newStatus === 'shipped') { updateData.isBankVerified = true; updateData.isShipped = true; }
+      if (newStatus === 'pending') { updateData.isBankVerified = false; updateData.isShipped = false; }
+
+      await updateDoc(doc(db, 'orders', currentOrderId), updateData);
       const order = allOrders.find(o => o.id === currentOrderId);
-      if (order) order.status = newStatus;
+      if (order) {
+        order.status = newStatus;
+        if (newStatus === 'paid') order.isBankVerified = true;
+        if (newStatus === 'shipped') { order.isBankVerified = true; order.isShipped = true; }
+        if (newStatus === 'pending') { order.isBankVerified = false; order.isShipped = false; }
+      }
       showToast('訂單狀態已更新！');
       closeOrderModal();
       renderOrders();
