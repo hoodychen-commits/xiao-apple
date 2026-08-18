@@ -63,7 +63,7 @@
 
 <!-- Footer -->
 <footer class="footer">
-  <p>© 2024 小蘋果團購 · 好物共享，揪團更划算 🍎</p>
+  <p>© 2026 小蘋果團購 · 好物共享，揪團更划算 🍎</p>
 </footer>
 
 <script type="module">
@@ -79,8 +79,7 @@
     try {
       const q = query(
         collection(db, 'products'),
-        where('status', '==', 'active'),
-        orderBy('createdAt', 'desc')
+        where('status', '==', 'active')
       );
       const snapshot = await getDocs(q);
 
@@ -91,11 +90,17 @@
         return;
       }
 
+      const products = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      products.sort((a, b) => {
+        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+        return timeB - timeA;
+      });
+
       grid.style.display = 'grid';
       grid.innerHTML = '';
 
-      snapshot.forEach(docSnap => {
-        const product = { id: docSnap.id, ...docSnap.data() };
+      products.forEach(product => {
         grid.appendChild(createProductCard(product));
       });
 
@@ -124,6 +129,21 @@
       ? (daysLeft <= 0 ? '已截止' : `${daysLeft} 天後截止`)
       : '長期開團';
 
+    // 價格顯示：支援多種類
+    let priceDisplay = '';
+    if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+      const prices = product.variants.map(v => v.price).filter(p => !isNaN(p));
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      if (prices.length === 1 || minPrice === maxPrice) {
+        priceDisplay = `NT$ ${Number(minPrice).toLocaleString()}`;
+      } else {
+        priceDisplay = `NT$ ${Number(minPrice).toLocaleString()} 起`;
+      }
+    } else {
+      priceDisplay = `NT$ ${Number(product.price).toLocaleString()}`;
+    }
+
     card.innerHTML = `
       <div class="product-card-img">${imgContent}</div>
       <div class="product-card-body">
@@ -132,7 +152,7 @@
         <p class="product-card-desc">${escapeHtml(product.description || '')}</p>
         <div class="product-card-footer">
           <div class="product-price">
-            NT$ ${Number(product.price).toLocaleString()}
+            ${priceDisplay}
             <span>/ ${product.unit || '件'}</span>
           </div>
           <div class="product-deadline ${isUrgent ? 'urgent' : ''}">

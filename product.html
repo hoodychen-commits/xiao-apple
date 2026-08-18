@@ -7,6 +7,56 @@
   <meta name="description" content="查看商品詳情並立即下單，小蘋果團購精選好物。">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
+  <style>
+    .variant-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .variant-btn {
+      padding: 10px 18px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-section);
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--text-mid);
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 100px;
+    }
+    .variant-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .variant-btn.active {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, #FFF5F5, #FFF0F0);
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .variant-btn .variant-price {
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .variant-btn .variant-stock-info {
+      font-size: 0.72rem;
+      color: var(--text-light);
+    }
+    .variant-btn.active .variant-stock-info {
+      color: var(--primary);
+      opacity: 0.8;
+    }
+    .variant-btn.sold-out {
+      opacity: 0.5;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+  </style>
 </head>
 <body>
 
@@ -52,6 +102,16 @@
           <span class="product-card-tag" id="productCategory">精選商品</span>
           <h1 style="font-size:1.8rem;margin:12px 0 8px;" id="productName">商品名稱</h1>
           <div class="product-detail-price" id="productPrice">NT$ 0</div>
+        </div>
+
+        <!-- Variant Selector (only shown for multi-variant products) -->
+        <div id="variantSelectorSection" style="display:none;">
+          <div class="product-detail-meta" style="margin-bottom:0;padding-bottom:0;border:none;">
+            <div class="meta-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+              <span class="meta-label">🏷️ 請選擇種類</span>
+              <div class="variant-selector" id="variantSelector"></div>
+            </div>
+          </div>
         </div>
 
         <div class="product-detail-meta">
@@ -129,6 +189,10 @@
 
           <!-- Order Summary -->
           <div class="order-summary" id="orderSummary">
+            <div class="order-summary-row" id="summaryVariantRow" style="display:none;">
+              <span>選擇種類</span>
+              <span id="summaryVariant">-</span>
+            </div>
             <div class="order-summary-row">
               <span>商品單價</span>
               <span id="summaryPrice">NT$ 0</span>
@@ -165,7 +229,7 @@
 </div>
 
 <footer class="footer">
-  <p>© 2024 小蘋果團購 · 好物共享，揪團更划算 🍎</p>
+  <p>© 2026 小蘋果團購 · 好物共享，揪團更划算 🍎</p>
 </footer>
 
 <script type="module">
@@ -177,6 +241,7 @@
   const params = new URLSearchParams(window.location.search);
   const productId = params.get('id');
   let currentProduct = null;
+  let selectedVariantIndex = 0;
 
   function showToast(msg, type = 'success') {
     const container = document.getElementById('toastContainer');
@@ -185,6 +250,12 @@
     toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${msg}`;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 3500);
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
   }
 
   async function loadProduct() {
@@ -230,17 +301,25 @@
     }
   }
 
+  function getSelectedVariant() {
+    if (currentProduct.variants && Array.isArray(currentProduct.variants) && currentProduct.variants.length > 0) {
+      return currentProduct.variants[selectedVariantIndex] || currentProduct.variants[0];
+    }
+    // 向下相容
+    return { name: '', price: currentProduct.price, stock: currentProduct.stock };
+  }
+
   function renderProduct(product) {
     document.title = `${product.name} — 小蘋果團購`;
 
     document.getElementById('breadcrumbName').textContent = product.name;
     document.getElementById('productName').textContent = product.name;
     document.getElementById('productCategory').textContent = product.category || '精選商品';
-    document.getElementById('productPrice').textContent = `NT$ ${Number(product.price).toLocaleString()}`;
     document.getElementById('productDesc').textContent = product.description || '';
     document.getElementById('productUnit').textContent = product.unit || '件';
     document.getElementById('qtyUnit').textContent = product.unit || '件';
 
+    // Image gallery
     const thumbList = document.getElementById('thumbnailList');
     thumbList.innerHTML = '';
 
@@ -275,6 +354,7 @@
       thumbList.style.display = 'none';
     }
 
+    // Deadline
     if (product.deadline) {
       const d = new Date(product.deadline);
       const daysLeft = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
@@ -286,19 +366,97 @@
       }
     }
 
-    if (product.stock !== undefined) {
-      const stockEl = document.getElementById('productStock');
-      if (product.stock <= 0) {
+    // Variant selector
+    if (product.variants && Array.isArray(product.variants) && product.variants.length > 1) {
+      renderVariantSelector(product.variants);
+      document.getElementById('variantSelectorSection').style.display = 'block';
+    } else {
+      document.getElementById('variantSelectorSection').style.display = 'none';
+    }
+
+    // Set initial variant
+    selectedVariantIndex = 0;
+    updateVariantDisplay();
+  }
+
+  function renderVariantSelector(variants) {
+    const selector = document.getElementById('variantSelector');
+    selector.innerHTML = '';
+
+    variants.forEach((v, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `variant-btn ${i === 0 ? 'active' : ''}`;
+
+      const isSoldOut = v.stock !== undefined && v.stock <= 0;
+      if (isSoldOut) btn.classList.add('sold-out');
+
+      let stockText = '';
+      if (v.stock !== undefined) {
+        stockText = v.stock <= 0 ? '已售完' : `庫存 ${v.stock}`;
+      }
+
+      btn.innerHTML = `
+        <span>${escapeHtml(v.name || '預設')}</span>
+        <span class="variant-price">NT$ ${Number(v.price).toLocaleString()}</span>
+        ${stockText ? `<span class="variant-stock-info">${stockText}</span>` : ''}
+      `;
+
+      btn.addEventListener('click', () => {
+        if (isSoldOut) return;
+        selectedVariantIndex = i;
+        document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateVariantDisplay();
+      });
+
+      selector.appendChild(btn);
+    });
+  }
+
+  function updateVariantDisplay() {
+    const variant = getSelectedVariant();
+    const price = variant.price || 0;
+
+    // Update price display
+    document.getElementById('productPrice').textContent = `NT$ ${Number(price).toLocaleString()}`;
+
+    // Update stock display
+    const stockEl = document.getElementById('productStock');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (variant.stock !== undefined) {
+      if (variant.stock <= 0) {
         stockEl.textContent = '已售完';
         stockEl.style.color = 'var(--primary)';
-        document.getElementById('submitBtn').disabled = true;
-        document.getElementById('submitBtn').textContent = '已售完';
-      } else if (product.stock <= 10) {
-        stockEl.textContent = `僅剩 ${product.stock} ${product.unit || '件'}`;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '已售完';
+      } else if (variant.stock <= 10) {
+        stockEl.textContent = `僅剩 ${variant.stock} ${currentProduct.unit || '件'}`;
         stockEl.style.color = 'var(--primary)';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🎉 確認下單';
       } else {
-        stockEl.textContent = `${product.stock} ${product.unit || '件'}`;
+        stockEl.textContent = `${variant.stock} ${currentProduct.unit || '件'}`;
+        stockEl.style.color = '';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🎉 確認下單';
       }
+    } else {
+      stockEl.textContent = '充足';
+      stockEl.style.color = '';
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🎉 確認下單';
+    }
+
+    // Update summary
+    const hasVariants = currentProduct.variants && currentProduct.variants.length > 1;
+    const variantRow = document.getElementById('summaryVariantRow');
+    if (hasVariants && variant.name) {
+      variantRow.style.display = 'flex';
+      document.getElementById('summaryVariant').textContent = variant.name;
+    } else {
+      variantRow.style.display = 'none';
     }
 
     updateSummary();
@@ -307,7 +465,8 @@
   function updateSummary() {
     if (!currentProduct) return;
     const qty = parseInt(document.getElementById('quantity').value) || 1;
-    const price = currentProduct.price || 0;
+    const variant = getSelectedVariant();
+    const price = variant.price || 0;
     const total = qty * price;
 
     document.getElementById('summaryPrice').textContent = `NT$ ${Number(price).toLocaleString()}`;
@@ -333,11 +492,8 @@
   // Payment method toggle
   document.querySelectorAll('input[name="payment"]').forEach(radio => {
     radio.addEventListener('change', () => {
-      document.getElementById('creditInfo').classList.remove('show');
       document.getElementById('transferInfo').classList.remove('show');
-      if (radio.value === 'credit') {
-        document.getElementById('creditInfo').classList.add('show');
-      } else if (radio.value === 'transfer') {
+      if (radio.value === 'transfer') {
         document.getElementById('transferInfo').classList.add('show');
       }
     });
@@ -362,19 +518,27 @@
       return;
     }
 
+    const variant = getSelectedVariant();
+
+    // Check if selected variant has enough stock
+    if (variant.stock !== undefined && variant.stock < qty) {
+      showToast(`庫存不足！「${variant.name || '此商品'}」僅剩 ${variant.stock} ${currentProduct.unit || '件'}`, 'error');
+      return;
+    }
+
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.textContent = '送出中...';
 
     try {
-      const total = qty * currentProduct.price;
+      const total = qty * variant.price;
       const orderCode = `AP${Date.now().toString(36).toUpperCase()}`;
 
-      await addDoc(collection(db, 'orders'), {
+      const orderData = {
         orderCode,
         productId: currentProduct.id,
         productName: currentProduct.name,
-        productPrice: currentProduct.price,
+        productPrice: variant.price,
         productUnit: currentProduct.unit || '件',
         quantity: qty,
         totalAmount: total,
@@ -385,12 +549,20 @@
         note,
         status: 'pending',
         createdAt: serverTimestamp()
-      });
+      };
+
+      // 加入種類資訊
+      if (variant.name) {
+        orderData.variantName = variant.name;
+      }
+
+      await addDoc(collection(db, 'orders'), orderData);
 
       // Save to sessionStorage for success page
       sessionStorage.setItem('lastOrder', JSON.stringify({
         orderCode,
         productName: currentProduct.name,
+        variantName: variant.name || '',
         quantity: qty,
         totalAmount: total,
         paymentMethod: payment.value
