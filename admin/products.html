@@ -91,7 +91,7 @@
 <!-- Loading Overlay -->
 <div class="loading-overlay" id="loadingOverlay" style="display:none;">
   <div class="spinner"></div>
-  <p style="color:var(--text-mid);">處理中...</p>
+  <p style="color:var(--text-mid);" id="loadingText">處理中...</p>
 </div>
 
 <!-- Delete Confirm Modal -->
@@ -735,9 +735,10 @@
             try {
               const uploadPromise = uploadBytes(imgRef, blob)
                 .then(snap => getDownloadURL(snap.ref))
-                .then(url => ({ url, path: imgRef.fullPath }));
+                .then(url => ({ url, path: imgRef.fullPath }))
+                .catch(err => { throw err; });
 
-              const storageResult = await withTimeout(uploadPromise, 6000, 'Storage upload timeout');
+              const storageResult = await withTimeout(uploadPromise, 4000, 'Storage upload timeout');
               console.log(`[saveProduct] 圖片 ${idx + 1} 已上傳至 Storage:`, storageResult.url);
               return storageResult;
             } catch (storageErr) {
@@ -790,8 +791,8 @@
         console.log('[saveProduct] 執行 updateDoc...');
         await withTimeout(
           updateDoc(doc(db, 'products', editId), productData),
-          15000,
-          '更新商品超時，請檢查網路連線後重試。'
+          8000,
+          '更新商品超時，請檢查 Firebase 網路連線或規則設定後重試。'
         );
         showToast('商品已更新！');
         console.log('[saveProduct] updateDoc 完成');
@@ -803,8 +804,8 @@
             views: 0,
             createdAt: serverTimestamp()
           }),
-          15000,
-          '新增商品超時，請檢查網路連線後重試。'
+          8000,
+          '新增商品超時，請檢查 Firebase 網路連線或規則設定後重試。'
         );
         showToast('商品已新增成功！');
         console.log('[saveProduct] addDoc 完成');
@@ -817,7 +818,11 @@
 
     } catch (err) {
       console.error('[saveProduct] 發生錯誤:', err);
-      showToast('儲存失敗：' + (err.message || '請再試一次'), 'error');
+      let errMsg = err.message || '請再試一次';
+      if (err.code === 'permission-denied' || errMsg.includes('permission') || errMsg.includes('insufficient')) {
+        errMsg = 'Firebase 資料庫權限未開放（permission-denied）。請至 Firebase Console 設定 Firestore 規則為 allow read, write: if true;';
+      }
+      showToast('儲存失敗：' + errMsg, 'error');
     } finally {
       showLoading(false);
     }
