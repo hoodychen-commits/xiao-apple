@@ -1713,4 +1713,56 @@ textarea.form-control {
   border: 1px solid #BFDBFE;
 }
 
+.bank-verified-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.btn-verify-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-verify-toggle.unverified {
+  background: #F3F4F6;
+  color: #4B5563;
+  border-color: #D1D5DB;
+}
+
+.btn-verify-toggle.unverified:hover {
+  background: #E5E7EB;
+  border-color: #9CA3AF;
+  transform: translateY(-1px);
+}
+
+.btn-verify-toggle.verified {
+  background: #10B981;
+  color: white;
+  border-color: #059669;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.btn-verify-toggle.verified:hover {
+  background: #059669;
+}
+
+
 

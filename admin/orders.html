@@ -11,26 +11,6 @@
 
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- Order Detail Modal -->
-<div class="modal-overlay" id="orderDetailModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title">🧾 訂單詳情</h3>
-      <button class="modal-close" onclick="closeOrderModal()">✕</button>
-    </div>
-    <div class="modal-body" id="orderDetailBody"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeOrderModal()">關閉</button>
-      <select id="statusSelect" class="form-control" style="max-width:160px;">
-        <option value="pending">⏳ 待付款</option>
-        <option value="paid">✅ 已付款</option>
-        <option value="shipped">📦 已出貨</option>
-        <option value="cancelled">❌ 已取消</option>
-      </select>
-      <button class="btn btn-primary" onclick="updateOrderStatus()">更新狀態</button>
-    </div>
-  </div>
-</div>
 
 <div class="admin-layout">
 
@@ -54,13 +34,13 @@
     <div class="admin-header">
       <h2 class="admin-page-title">🧾 訂單管理</h2>
       <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" class="form-control" id="searchInput" placeholder="🔍 搜尋訂單編號/姓名..." style="max-width:240px;" oninput="searchOrders(this.value)">
+        <input type="text" class="form-control" id="searchInput" placeholder="🔍 搜尋姓名/電話/地址/末五碼/訂單號..." style="min-width:280px;" oninput="searchOrders(this.value)">
       </div>
     </div>
 
     <!-- Filter Tabs -->
     <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
-      <button class="btn btn-primary btn-sm" id="oFilterAll" onclick="filterOrders('all')">全部</button>
+      <button class="btn btn-primary btn-sm" id="oFilterAll" onclick="filterOrders('all')">全部訂單</button>
       <button class="btn btn-secondary btn-sm" id="oFilterPending" onclick="filterOrders('pending')">⏳ 待付款</button>
       <button class="btn btn-secondary btn-sm" id="oFilterPaid" onclick="filterOrders('paid')">✅ 已付款</button>
       <button class="btn btn-secondary btn-sm" id="oFilterShipped" onclick="filterOrders('shipped')">📦 已出貨</button>
@@ -75,21 +55,21 @@
       <div id="ordersEmpty" style="display:none;">
         <div class="empty-state">
           <div class="empty-state-icon">🧾</div>
-          <h3>尚無訂單</h3>
-          <p>還沒有客人下單，請先確認商品是否有上架。</p>
+          <h3>尚無符合條件的訂單</h3>
+          <p>請更換搜尋關鍵字或篩選分類。</p>
         </div>
       </div>
       <table class="admin-table" id="ordersTable" style="display:none;">
         <thead>
           <tr>
             <th>訂單編號</th>
-            <th>商品</th>
-            <th>客人姓名</th>
-            <th>手機</th>
-            <th>數量</th>
-            <th>金額</th>
+            <th>訂購商品</th>
+            <th>訂購人 / 電話</th>
+            <th>收件地址</th>
+            <th>數量 / 金額</th>
             <th>匯款後五碼</th>
-            <th>狀態</th>
+            <th>對帳確認</th>
+            <th>訂單狀態</th>
             <th>下單時間</th>
             <th>操作</th>
           </tr>
@@ -98,6 +78,29 @@
       </table>
     </div>
   </main>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal-overlay" id="orderDetailModal">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-header">
+      <h3 class="modal-title">🧾 訂單完整資訊</h3>
+      <button class="modal-close" onclick="closeOrderModal()">✕</button>
+    </div>
+    <div class="modal-body" id="orderDetailBody"></div>
+    <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-top:1px solid var(--border);background:var(--bg);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:0.85rem;font-weight:600;color:var(--text-dark);">更新訂單狀態：</span>
+        <select class="form-control" id="statusSelect" style="width:auto;padding:6px 12px;font-size:0.85rem;">
+          <option value="pending">⏳ 待付款</option>
+          <option value="paid">✅ 已付款</option>
+          <option value="shipped">📦 已出貨</option>
+          <option value="cancelled">❌ 已取消</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="updateOrderStatus()">儲存更新</button>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -158,10 +161,12 @@
     }
 
     if (currentSearch) {
-      const s = currentSearch.toLowerCase();
+      const s = currentSearch.toLowerCase().trim();
       filtered = filtered.filter(o =>
         (o.orderCode || '').toLowerCase().includes(s) ||
         (o.buyerName || '').toLowerCase().includes(s) ||
+        (o.buyerPhone || '').toLowerCase().includes(s) ||
+        (o.buyerAddress || '').toLowerCase().includes(s) ||
         (o.productName || '').toLowerCase().includes(s) ||
         (o.bankLast5 || '').toLowerCase().includes(s)
       );
@@ -196,17 +201,37 @@
         ? `<span class="bank-last5-badge">末五碼 ${escapeHtml(order.bankLast5)}</span>`
         : `<span style="color:var(--text-light);font-size:0.8rem;">⏳ 待回填</span>`;
 
+      const isVerified = Boolean(order.isBankVerified);
+      const verifyBtnHtml = isVerified
+        ? `<button class="btn-verify-toggle verified" onclick="toggleBankVerified('${order.id}', false)" title="點擊取消對帳">✅ 對帳正確</button>`
+        : `<button class="btn-verify-toggle unverified" onclick="toggleBankVerified('${order.id}', true)" title="確認收到款項請點擊打勾">⬜ 待核對</button>`;
+
       return `
         <tr>
           <td style="font-family:monospace;font-weight:700;color:var(--primary);font-size:0.85rem;">${order.orderCode || '-'}</td>
-          <td style="max-width:160px;font-size:0.88rem;">${escapeHtml(order.productName || '-')}${order.variantName ? `<br><small style="color:var(--text-light)">規格: ${escapeHtml(order.variantName)}</small>` : ''}</td>
-          <td style="font-weight:500;">${escapeHtml(order.buyerName || '-')}</td>
-          <td style="font-size:0.88rem;color:var(--text-mid);">${escapeHtml(order.buyerPhone || '-')}</td>
-          <td>${order.quantity || 1} ${order.productUnit || '件'}</td>
-          <td style="font-weight:700;color:var(--primary);">NT$ ${Number(order.totalAmount || 0).toLocaleString()}</td>
-          <td>${bankLast5Badge}</td>
+          <td style="max-width:140px;font-size:0.88rem;">
+            <strong>${escapeHtml(order.productName || '-')}</strong>
+            ${order.variantName ? `<br><small style="color:var(--text-mid);background:#FFF0F4;padding:1px 6px;border-radius:4px;">規格: ${escapeHtml(order.variantName)}</small>` : ''}
+          </td>
+          <td>
+            <div style="font-weight:600;color:var(--text-dark);">${escapeHtml(order.buyerName || '-')}</div>
+            <div style="font-size:0.82rem;color:var(--text-mid);font-family:monospace;">📞 ${escapeHtml(order.buyerPhone || '-')}</div>
+          </td>
+          <td style="max-width:180px;font-size:0.82rem;color:var(--text-mid);word-break:break-all;">
+            📍 ${escapeHtml(order.buyerAddress || '-')}
+          </td>
+          <td>
+            <div style="font-size:0.85rem;">${order.quantity || 1} ${order.productUnit || '件'}</div>
+            <div style="font-weight:700;color:var(--primary);font-size:0.95rem;">NT$ ${Number(order.totalAmount || 0).toLocaleString()}</div>
+          </td>
+          <td>
+            ${bankLast5Badge}
+          </td>
+          <td>
+            ${verifyBtnHtml}
+          </td>
           <td>${statusMap[order.status] || '-'}</td>
-          <td style="font-size:0.8rem;color:var(--text-light);">${createdAt}</td>
+          <td style="font-size:0.78rem;color:var(--text-light);white-space:nowrap;">${createdAt}</td>
           <td>
             <button class="btn btn-secondary btn-sm" onclick="openOrderDetail('${order.id}')">詳情</button>
           </td>
@@ -237,6 +262,39 @@
     renderOrders();
   };
 
+  // Toggle Bank Reconciliation Checkmark
+  window.toggleBankVerified = async (orderId, targetState) => {
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    try {
+      const updateData = {
+        isBankVerified: targetState,
+        updatedAt: new Date()
+      };
+
+      // If manager marks as verified and status was pending, auto-suggest or set to 'paid'
+      if (targetState && order.status === 'pending') {
+        updateData.status = 'paid';
+        order.status = 'paid';
+      }
+
+      await updateDoc(doc(db, 'orders', orderId), updateData);
+      order.isBankVerified = targetState;
+
+      showToast(targetState ? '✅ 已確認對帳正確（已更新為已付款）！' : '已取消對帳標記');
+      renderOrders();
+
+      // If modal is open, re-render modal content
+      if (currentOrderId === orderId) {
+        openOrderDetail(orderId);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('更新對帳狀態失敗', 'error');
+    }
+  };
+
   window.openOrderDetail = (id) => {
     const order = allOrders.find(o => o.id === id);
     if (!order) return;
@@ -246,63 +304,81 @@
       ? order.createdAt.toDate().toLocaleString('zh-TW')
       : '-';
 
+    const isVerified = Boolean(order.isBankVerified);
+
     document.getElementById('orderDetailBody').innerHTML = `
-      <div style="display:grid;gap:12px;">
-        <div style="background:var(--bg-section);border-radius:var(--radius-sm);padding:16px;">
-          <div style="font-size:0.78rem;color:var(--text-light);margin-bottom:4px;">訂單編號</div>
-          <div style="font-family:monospace;font-weight:700;color:var(--primary);font-size:1.1rem;">${order.orderCode || '-'}</div>
+      <div style="display:grid;gap:14px;">
+        <div style="background:var(--bg-section);border-radius:var(--radius-sm);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:0.78rem;color:var(--text-light);margin-bottom:2px;">訂單編號</div>
+            <div style="font-family:monospace;font-weight:700;color:var(--primary);font-size:1.15rem;">${order.orderCode || '-'}</div>
+          </div>
+          <div>
+            <div style="font-size:0.78rem;color:var(--text-light);margin-bottom:2px;">下單時間</div>
+            <div style="color:var(--text-mid);font-size:0.85rem;">${createdAt}</div>
+          </div>
         </div>
 
-        <!-- Bank Reconciliation Box -->
-        <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius-sm);padding:14px;">
-          <div style="font-size:0.8rem;color:#1E40AF;font-weight:600;margin-bottom:4px;">🏦 買家匯款對帳資訊</div>
-          <div style="font-size:1.1rem;font-weight:800;color:#1D4ED8;font-family:monospace;">
-            ${order.bankLast5 ? `末五碼：${escapeHtml(order.bankLast5)}` : '⏳ 買家尚未回填末五碼'}
+        <!-- Bank Reconciliation & Verification Checkmark Box -->
+        <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius-sm);padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div style="font-size:0.8rem;color:#1E40AF;font-weight:600;margin-bottom:4px;">🏦 買家匯款對帳後五碼</div>
+            <div style="font-size:1.2rem;font-weight:800;color:#1D4ED8;font-family:monospace;letter-spacing:1px;">
+              ${order.bankLast5 ? `末五碼：${escapeHtml(order.bankLast5)}` : '⏳ 買家尚未填寫末五碼'}
+            </div>
+          </div>
+          <div>
+            <button class="btn-verify-toggle ${isVerified ? 'verified' : 'unverified'}" onclick="toggleBankVerified('${order.id}', ${!isVerified})" style="padding:8px 16px;font-size:0.9rem;">
+              ${isVerified ? '✅ 已確認對帳正確（點擊取消）' : '⬜ 點擊確認對帳正確 ✔'}
+            </button>
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">商品</div>
-            <div style="font-weight:500;">${escapeHtml(order.productName)} ${order.variantName ? `(${escapeHtml(order.variantName)})` : ''}</div>
+        <!-- Buyer Info Box -->
+        <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;">
+          <h4 style="font-size:0.9rem;color:var(--text-dark);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+            <span>👤</span> 訂購人收件資訊
+          </h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.9rem;margin-bottom:10px;">
+            <div>
+              <span style="color:var(--text-light);font-size:0.8rem;display:block;">姓名</span>
+              <strong style="color:var(--text-dark);font-size:1rem;">${escapeHtml(order.buyerName || '-')}</strong>
+            </div>
+            <div>
+              <span style="color:var(--text-light);font-size:0.8rem;display:block;">手機號碼</span>
+              <strong style="color:var(--text-dark);font-family:monospace;font-size:1rem;">📞 ${escapeHtml(order.buyerPhone || '-')}</strong>
+            </div>
           </div>
           <div>
-            <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">應付金額</div>
-            <div style="font-weight:700;color:var(--primary);">NT$ ${Number(order.totalAmount || 0).toLocaleString()}</div>
+            <span style="color:var(--text-light);font-size:0.8rem;display:block;">收件地址</span>
+            <div style="color:var(--text-dark);font-weight:500;background:var(--bg);padding:8px 12px;border-radius:6px;margin-top:2px;">
+              📍 ${escapeHtml(order.buyerAddress || '-')}
+            </div>
           </div>
-          <div>
-            <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">數量</div>
-            <div>${order.quantity} ${order.productUnit || '件'}</div>
-          </div>
-          <div>
-            <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">付款方式</div>
-            <div>${order.paymentMethod || '銀行轉帳'}</div>
+          ${order.note ? `
+          <div style="margin-top:10px;">
+            <span style="color:var(--text-light);font-size:0.8rem;display:block;">訂單備註</span>
+            <div style="color:var(--text-mid);background:var(--bg-section);padding:8px 12px;border-radius:6px;font-size:0.85rem;margin-top:2px;">
+              💬 ${escapeHtml(order.note)}
+            </div>
+          </div>` : ''}
+        </div>
+
+        <!-- Product & Amount Box -->
+        <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;">
+          <h4 style="font-size:0.9rem;color:var(--text-dark);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+            <span>🛍️</span> 訂購商品明細
+          </h4>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;font-size:0.88rem;align-items:center;">
+            <div>
+              <strong style="color:var(--text-dark);">${escapeHtml(order.productName || '-')}</strong>
+              ${order.variantName ? `<div style="font-size:0.8rem;color:var(--primary);">規格: ${escapeHtml(order.variantName)}</div>` : ''}
+            </div>
+            <div style="color:var(--text-mid);">${order.quantity || 1} ${order.productUnit || '件'}</div>
+            <div style="font-weight:800;color:var(--primary);font-size:1.1rem;text-align:right;">NT$ ${Number(order.totalAmount || 0).toLocaleString()}</div>
           </div>
         </div>
-        <hr style="border:none;border-top:1px solid var(--border);">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">訂購人姓名</div>
-            <div style="font-weight:500;">${escapeHtml(order.buyerName)}</div>
-          </div>
-          <div>
-            <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">手機號碼</div>
-            <div>${escapeHtml(order.buyerPhone)}</div>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">收件地址</div>
-          <div>${escapeHtml(order.buyerAddress || '-')}</div>
-        </div>
-        ${order.note ? `
-        <div>
-          <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">備註</div>
-          <div style="color:var(--text-mid);">${escapeHtml(order.note)}</div>
-        </div>` : ''}
-        <div>
-          <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:4px;">下單時間</div>
-          <div style="color:var(--text-mid);font-size:0.9rem;">${createdAt}</div>
-        </div>
+
       </div>
     `;
 
