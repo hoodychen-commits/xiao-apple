@@ -585,6 +585,305 @@
     if (e.target === this) closeReviewModal();
   });
 
+  async function loadProduct() {
+    if (!productId) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    try {
+      const docRef = doc(db, 'products', productId);
+      const docSnap = await getDoc(docRef);
+
+      document.getElementById('pageLoading').style.display = 'none';
+
+      if (!docSnap.exists() || docSnap.data().status !== 'active') {
+        document.getElementById('closedState').style.display = 'flex';
+        return;
+      }
+
+      currentProduct = { id: docSnap.id, ...docSnap.data() };
+
+      // Check deadline
+      if (currentProduct.deadline) {
+        const deadline = new Date(currentProduct.deadline);
+        if (deadline < new Date()) {
+          document.getElementById('closedState').style.display = 'flex';
+          await updateDoc(docRef, { status: 'ended' });
+          return;
+        }
+      }
+
+      // Track view
+      await updateDoc(docRef, { views: increment(1) });
+
+      renderProduct(currentProduct);
+      document.getElementById('mainContent').style.display = 'block';
+
+      // Load reviews
+      loadProductReviews();
+
+    } catch (error) {
+      console.error(error);
+      document.getElementById('pageLoading').style.display = 'none';
+      document.getElementById('closedState').style.display = 'flex';
+    }
+  }
+
+  function getSelectedVariant() {
+    if (currentProduct.variants && Array.isArray(currentProduct.variants) && currentProduct.variants.length > 0) {
+      return currentProduct.variants[selectedVariantIndex] || currentProduct.variants[0];
+    }
+    return { name: '', price: currentProduct.price, stock: currentProduct.stock };
+  }
+
+  function renderProduct(product) {
+    document.title = `${product.name} — 小蘋果團購`;
+
+    document.getElementById('breadcrumbName').textContent = product.name;
+    document.getElementById('productName').textContent = product.name;
+    document.getElementById('productCategory').textContent = product.category || '精選商品';
+    document.getElementById('productDesc').textContent = product.description || '';
+    document.getElementById('productUnit').textContent = product.unit || '件';
+    document.getElementById('qtyUnit').textContent = product.unit || '件';
+
+    // Image gallery
+    const thumbList = document.getElementById('thumbnailList');
+    thumbList.innerHTML = '';
+
+    if (product.imageUrls && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
+      document.getElementById('productImg').innerHTML = `<img src="${product.imageUrls[0]}" alt="${product.name}">`;
+      
+      if (product.imageUrls.length > 1) {
+        thumbList.style.display = 'flex';
+        product.imageUrls.forEach((url, i) => {
+          const thumb = document.createElement('div');
+          thumb.className = `thumbnail-item ${i === 0 ? 'active' : ''}`;
+          thumb.innerHTML = `<img src="${url}" alt="縮圖 ${i+1}">`;
+          
+          const switchImg = () => {
+            document.querySelectorAll('.thumbnail-item').forEach(el => el.classList.remove('active'));
+            thumb.classList.add('active');
+            document.getElementById('productImg').innerHTML = `<img src="${url}" alt="${product.name}">`;
+          };
+          
+          thumb.addEventListener('click', switchImg);
+          thumb.addEventListener('mouseenter', switchImg);
+          thumbList.appendChild(thumb);
+        });
+      } else {
+        thumbList.style.display = 'none';
+      }
+    } else if (product.imageUrl) {
+      document.getElementById('productImg').innerHTML = `<img src="${product.imageUrl}" alt="${product.name}">`;
+      thumbList.style.display = 'none';
+    } else {
+      document.getElementById('productImg').innerHTML = '🛍️';
+      thumbList.style.display = 'none';
+    }
+
+    // Deadline
+    if (product.deadline) {
+      const d = new Date(product.deadline);
+      const daysLeft = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
+      document.getElementById('productDeadline').textContent =
+        `${d.toLocaleDateString('zh-TW')}（剩 ${daysLeft} 天）`;
+      if (daysLeft <= 3) {
+        document.getElementById('productDeadline').style.color = 'var(--primary)';
+        document.getElementById('productDeadline').style.fontWeight = '700';
+      }
+    }
+
+    // Variant selector
+    if (product.variants && Array.isArray(product.variants) && product.variants.length > 1) {
+      renderVariantSelector(product.variants);
+      document.getElementById('variantSelectorSection').style.display = 'block';
+    } else {
+      document.getElementById('variantSelectorSection').style.display = 'none';
+    }
+
+    selectedVariantIndex = 0;
+    updateVariantDisplay();
+  }
+
+  function renderVariantSelector(variants) {
+    const selector = document.getElementById('variantSelector');
+    selector.innerHTML = '';
+
+    variants.forEach((v, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `variant-btn ${i === 0 ? 'active' : ''}`;
+
+      const isSoldOut = v.stock !== undefined && v.stock <= 0;
+      if (isSoldOut) btn.classList.add('sold-out');
+
+      let stockText = '';
+      if (v.stock !== undefined) {
+        stockText = v.stock <= 0 ? '已售完' : `庫存 ${v.stock}`;
+      }
+
+      btn.innerHTML = `
+        <span>${escapeHtml(v.name || '預設')}</span>
+        <span class="variant-price">NT$ ${Number(v.price).toLocaleString()}</span>
+        ${stockText ? `<span class="variant-stock-info">${stockText}</span>` : ''}
+      `;
+
+      btn.addEventListener('click', () => {
+        if (isSoldOut) return;
+        selectedVariantIndex = i;
+        document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateVariantDisplay();
+      });
+
+      selector.appendChild(btn);
+    });
+  }
+
+  function updateVariantDisplay() {
+    const variant = getSelectedVariant();
+    const price = variant.price || 0;
+
+    document.getElementById('productPrice').textContent = `NT$ ${Number(price).toLocaleString()}`;
+
+    const stockEl = document.getElementById('productStock');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (variant.stock !== undefined) {
+      if (variant.stock <= 0) {
+        stockEl.textContent = '已售完';
+        stockEl.style.color = 'var(--primary)';
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '已售完'; }
+      } else if (variant.stock <= 10) {
+        stockEl.textContent = `僅剩 ${variant.stock} ${currentProduct.unit || '件'}`;
+        stockEl.style.color = 'var(--primary)';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🎉 確認送出訂單'; }
+      } else {
+        stockEl.textContent = `${variant.stock} ${currentProduct.unit || '件'}`;
+        stockEl.style.color = '';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🎉 確認送出訂單'; }
+      }
+    } else {
+      stockEl.textContent = '充足';
+      stockEl.style.color = '';
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🎉 確認送出訂單'; }
+    }
+
+    const hasVariants = currentProduct.variants && currentProduct.variants.length > 1;
+    const variantRow = document.getElementById('summaryVariantRow');
+    if (hasVariants && variant.name) {
+      variantRow.style.display = 'flex';
+      document.getElementById('summaryVariant').textContent = variant.name;
+    } else {
+      variantRow.style.display = 'none';
+    }
+
+    updateSummary();
+  }
+
+  function updateSummary() {
+    if (!currentProduct) return;
+    const qty = parseInt(document.getElementById('quantity').value) || 1;
+    const variant = getSelectedVariant();
+    const price = variant.price || 0;
+    const total = qty * price;
+
+    document.getElementById('summaryPrice').textContent = `NT$ ${Number(price).toLocaleString()}`;
+    document.getElementById('summaryTotal').textContent = `NT$ ${Number(total).toLocaleString()}`;
+  }
+
+  document.getElementById('qtyPlus').addEventListener('click', () => {
+    const input = document.getElementById('quantity');
+    input.value = Math.min(999, parseInt(input.value || 1) + 1);
+    updateSummary();
+  });
+
+  document.getElementById('qtyMinus').addEventListener('click', () => {
+    const input = document.getElementById('quantity');
+    input.value = Math.max(1, parseInt(input.value || 1) - 1);
+    updateSummary();
+  });
+
+  document.getElementById('quantity').addEventListener('input', updateSummary);
+
+  // Submit Order
+  window.submitOrder = async () => {
+    const name = document.getElementById('buyerName').value.trim();
+    const phone = document.getElementById('buyerPhone').value.trim();
+    const address = document.getElementById('buyerAddress').value.trim();
+    const qty = parseInt(document.getElementById('quantity').value) || 1;
+    const note = document.getElementById('buyerNote').value.trim();
+    const bankLast5 = document.getElementById('bankLast5').value.trim();
+
+    if (!name || !phone || !address) {
+      showToast('請填寫完整訂購資料', 'error');
+      goToStep1();
+      return;
+    }
+
+    const variant = getSelectedVariant();
+    if (variant.stock !== undefined && variant.stock < qty) {
+      showToast(`庫存不足！僅剩 ${variant.stock} ${currentProduct.unit || '件'}`, 'error');
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '送出訂單中...';
+
+    try {
+      const total = qty * variant.price;
+      const orderCode = `AP${Date.now().toString(36).toUpperCase()}`;
+
+      const orderData = {
+        orderCode,
+        productId: currentProduct.id,
+        productName: currentProduct.name,
+        productPrice: variant.price,
+        productUnit: currentProduct.unit || '件',
+        quantity: qty,
+        totalAmount: total,
+        buyerName: name,
+        buyerPhone: phone,
+        buyerAddress: address,
+        paymentMethod: '銀行轉帳',
+        bankLast5: bankLast5 || '',
+        note,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      };
+
+      if (variant.name) {
+        orderData.variantName = variant.name;
+      }
+
+      const docRef = await addDoc(collection(db, 'orders'), orderData);
+
+      // Save to sessionStorage for success page
+      sessionStorage.setItem('lastOrder', JSON.stringify({
+        orderId: docRef.id,
+        orderCode,
+        productId: currentProduct.id,
+        productName: currentProduct.name,
+        variantName: variant.name || '',
+        quantity: qty,
+        totalAmount: total,
+        buyerName: name,
+        bankLast5: bankLast5 || '',
+        paymentMethod: 'transfer'
+      }));
+
+      window.location.href = 'order-success.html';
+
+    } catch (error) {
+      console.error(error);
+      showToast('下單失敗，請稍後再試', 'error');
+      btn.disabled = false;
+      btn.textContent = '🎉 確認送出訂單';
+    }
+  };
+
   loadProduct();
 </script>
 
