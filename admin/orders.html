@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>訂單管理 — 小蘋果後台</title>
-  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/style.css?v=20260818">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
 </head>
 <body>
@@ -248,10 +248,10 @@
           </td>
           <td>${statusMap[order.status] || '-'}</td>
           <td style="font-size:0.78rem;color:var(--text-light);white-space:nowrap;">${createdAt}</td>
-          <td>
+          <td style="white-space:nowrap;">
             <div style="display:flex;gap:6px;align-items:center;">
               <button class="btn btn-secondary btn-sm" onclick="openOrderDetail('${order.id}')">詳情</button>
-              <button class="btn btn-danger-outline btn-sm" onclick="deleteOrder('${order.id}')" title="刪除此筆訂單資料">刪除</button>
+              <button class="btn btn-sm" style="background:#FEE2E2;color:#DC2626;border:1px solid #FCA5A5;font-weight:600;padding:6px 10px;cursor:pointer;border-radius:8px;" onclick="deleteOrder('${order.id}')" title="刪除此筆訂單資料">🗑️ 刪除</button>
             </div>
           </td>
         </tr>

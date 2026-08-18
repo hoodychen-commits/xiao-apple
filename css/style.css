@@ -985,11 +985,13 @@ textarea.form-control {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-soft);
   border: 1px solid var(--border);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-table {
   width: 100%;
+  min-width: 980px;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
