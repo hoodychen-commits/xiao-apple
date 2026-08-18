@@ -76,11 +76,7 @@
     const empty = document.getElementById('productsEmpty');
 
     try {
-      const q = query(
-        collection(db, 'products'),
-        where('status', '==', 'active')
-      );
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(collection(db, 'products'));
 
       loading.style.display = 'none';
 
@@ -89,7 +85,15 @@
         return;
       }
 
-      const products = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      let products = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      // 篩選開團中商品（排除草稿與截止）
+      products = products.filter(p => p.status === 'active' || !p.status);
+
+      if (products.length === 0) {
+        empty.style.display = 'block';
+        return;
+      }
+
       products.sort((a, b) => {
         const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
         const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);

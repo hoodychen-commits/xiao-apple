@@ -597,34 +597,45 @@
 
       document.getElementById('pageLoading').style.display = 'none';
 
-      if (!docSnap.exists() || docSnap.data().status !== 'active') {
+      if (!docSnap.exists()) {
         document.getElementById('closedState').style.display = 'flex';
         return;
       }
 
       currentProduct = { id: docSnap.id, ...docSnap.data() };
 
+      // Check status
+      if (currentProduct.status === 'draft') {
+        document.getElementById('closedState').style.display = 'flex';
+        return;
+      }
+
       // Check deadline
       if (currentProduct.deadline) {
         const deadline = new Date(currentProduct.deadline);
         if (deadline < new Date()) {
           document.getElementById('closedState').style.display = 'flex';
-          await updateDoc(docRef, { status: 'ended' });
+          try { updateDoc(docRef, { status: 'ended' }); } catch (e) {}
           return;
         }
       }
 
-      // Track view
-      await updateDoc(docRef, { views: increment(1) });
-
+      // Render product immediately
       renderProduct(currentProduct);
       document.getElementById('mainContent').style.display = 'block';
 
-      // Load reviews
+      // Track view (best-effort, non-blocking)
+      try {
+        updateDoc(docRef, { views: increment(1) });
+      } catch (e) {
+        console.warn('更新瀏覽數跳過:', e);
+      }
+
+      // Load reviews (best-effort)
       loadProductReviews();
 
     } catch (error) {
-      console.error(error);
+      console.error('載入商品詳情失敗:', error);
       document.getElementById('pageLoading').style.display = 'none';
       document.getElementById('closedState').style.display = 'flex';
     }
